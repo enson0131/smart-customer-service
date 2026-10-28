@@ -1,0 +1,6 @@
+# 本地模型配置（包含 API Key）
+/.env
+
+# 项目本地 Python 解释器和虚拟环境
+/.python/
+/.venv/

@@ -1,0 +1,28 @@
+[project]
+name = "smart-customer-service"
+version = "0.1.0"
+description = "基于 LangGraph 实现的 AI 智能客服系统"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "alibabacloud-oss-v2>=1.2.5",
+    "dashscope>=1.25.14",
+    "fastapi>=0.135.3",
+    "ipywidgets>=8.1.8",
+    # 流式响应示例已在此版本验证通过。
+    "langchain>=1.4.7",
+    "langchain-community>=0.4.1",
+    "langchain-deepseek>=1.0.1",
+    "langchain-mcp-adapters>=0.3.2",
+    "langchain-tavily>=0.2.17",
+    "langgraph-checkpoint-sqlite>=3.0.3",
+    "langgraph-cli[inmem]>=0.4.21",
+    "notebook>=7.5.5",
+    "openai>=2.29.0",
+    "python-dotenv>=1.2.2",
+    "socksio>=1.0.0",
+]
+
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
