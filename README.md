@@ -1,7 +1,6 @@
 # 项目简介
 
-基于 LangGrap 实现的 AI 智能客服系统
-
+基于 Langchain/LangGraph + RAG + DS 实现的 AI 智能客服系统
 
 
 # 项目依赖
