@@ -5,11 +5,9 @@
 将 MODEL_NAME 改为接口不支持的 deepseek-xxx，可观察重试及最终异常。
 """
 
-import os
-from pathlib import Path
 from typing import Callable
 
-from dotenv import load_dotenv
+from constants.deepseek import deepseek_connection
 from langchain.agents import create_agent
 from langchain.agents.middleware import ModelRequest, ModelResponse, wrap_model_call
 from langchain.chat_models import init_chat_model
@@ -43,21 +41,12 @@ def retry_model(
 
 
 def main() -> None:
-    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
-    model_config = {
-        name: os.getenv(name, "").strip()
-        for name in ("DEEPSEEK_API_KEY", "DEEPSEEK_BASE_URL")
-    }
-    missing = [name for name, value in model_config.items() if not value]
-    if missing:
-        raise ValueError(f"请在项目根目录的 .env 中配置：{', '.join(missing)}")
 
     # 2. 关闭模型客户端内置重试，使重试次数完全由自定义中间件控制。
     model = init_chat_model(
         model=MODEL_NAME,
         model_provider="deepseek",
-        api_key=model_config["DEEPSEEK_API_KEY"],
-        base_url=model_config["DEEPSEEK_BASE_URL"],
+        **deepseek_connection(require_base_url=True),
         max_retries=0,
         extra_body={"thinking": {"type": "disabled"}},
     )

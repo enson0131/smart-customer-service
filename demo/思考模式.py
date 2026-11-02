@@ -1,37 +1,25 @@
 """从项目根目录的 .env 加载凭证和接口地址并初始化 DeepSeek 模型。"""
 
-import os
-from pathlib import Path
 
-from dotenv import load_dotenv
+from constants import DEEPSEEK_MODEL
+from constants.deepseek import deepseek_connection
 from langchain.chat_models import init_chat_model
 
 
-MODEL_NAME = "deepseek-flash"
 
 # 使用绝对路径，确保从其他目录运行脚本时也能找到 .env。
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
-
-config = {
-    name: os.getenv(name, "").strip()
-    for name in ("DEEPSEEK_API_KEY", "DEEPSEEK_BASE_URL")
-}
-missing = [name for name, value in config.items() if not value]
-if missing:
-    raise ValueError(f"请在项目根目录的 .env 中配置：{', '.join(missing)}")
 
 # 初始化模型，并按照截图开启思考模式。
 model = init_chat_model(
-    model=MODEL_NAME,
+    model=DEEPSEEK_MODEL,
     model_provider="deepseek",
-    api_key=config["DEEPSEEK_API_KEY"],
-    base_url=config["DEEPSEEK_BASE_URL"],
+    **deepseek_connection(require_base_url=True),
     extra_body={"thinking": {"type": "disabled"}}, # 思考模式 enabled/ 非思考模式 disabled
 )
 
 
 if __name__ == "__main__":
-    print(f"模型初始化成功：{MODEL_NAME}")
+    print(f"模型初始化成功：{DEEPSEEK_MODEL}")
     response = model.invoke("你好")
     print("模型回复：", response)
 

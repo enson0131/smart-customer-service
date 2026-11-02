@@ -9,10 +9,9 @@ InMemorySaver 仅保存当前进程内的状态，退出后不能恢复本次审
 """
 
 import json
-import os
-from pathlib import Path
 
-from dotenv import load_dotenv
+from constants import DEEPSEEK_MODEL
+from constants.deepseek import deepseek_connection
 from langchain.agents import create_agent
 from langchain.agents.middleware import HumanInTheLoopMiddleware
 from langchain.agents.middleware.human_in_the_loop import ActionRequest, Decision
@@ -24,7 +23,6 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
 
 
-MODEL_NAME = "deepseek-flash"
 
 # 1. 模拟收件箱，沿用截图中的邮件内容。
 emails = [
@@ -117,20 +115,11 @@ def review_action(action: ActionRequest) -> Decision:
 
 
 def main() -> None:
-    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
-    settings = {
-        name: os.getenv(name, "").strip()
-        for name in ("DEEPSEEK_API_KEY", "DEEPSEEK_BASE_URL")
-    }
-    missing = [name for name, value in settings.items() if not value]
-    if missing:
-        raise ValueError(f"请在项目根目录的 .env 中配置：{', '.join(missing)}")
 
     model = init_chat_model(
-        model=MODEL_NAME,
+        model=DEEPSEEK_MODEL,
         model_provider="deepseek",
-        api_key=settings["DEEPSEEK_API_KEY"],
-        base_url=settings["DEEPSEEK_BASE_URL"],
+        **deepseek_connection(require_base_url=True),
         extra_body={"thinking": {"type": "disabled"}},
     )
     agent_with_hitl = create_hitl_agent(model)

@@ -1,0 +1,16 @@
+{
+  "name": "spruce-aftercare",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-11-01",
+  "containers": [{
+    "class_name": "Aftercare",
+    "scheduling_policy": "durable_object",
+    "images": { "base": { "dockerfile": "./Dockerfile" } }
+  }],
+  "durable_objects": { "bindings": [{ "name": "SERVICE", "class_name": "Aftercare" }] },
+  "exports": { "Aftercare": { "type": "durable-object", "storage": "sqlite" } },
+  "vars": {
+    "CF_ACCOUNT_ID": "replace-with-account-id",
+    "D1_DATABASE_ID": "replace-with-database-id"
+  }
+}

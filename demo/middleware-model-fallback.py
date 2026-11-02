@@ -4,10 +4,9 @@
 依赖项目根目录 .env 中的 DEEPSEEK_API_KEY 和 DEEPSEEK_BASE_URL。
 """
 
-import os
-from pathlib import Path
 
-from dotenv import load_dotenv
+from constants import DEEPSEEK_MODEL
+from constants.deepseek import deepseek_connection
 from langchain.agents import create_agent
 from langchain.agents.middleware import ModelFallbackMiddleware
 from langchain.chat_models import init_chat_model
@@ -17,26 +16,17 @@ from langchain.messages import HumanMessage
 # 沿用截图中的名称。若接口不支持 deepseek-鸡你太美，将触发备用模型调用。
 # 实际使用时，请替换为接口支持的主模型名称。
 PRIMARY_MODEL_NAME = "deepseek-鸡你太美-假设的模型"
-FALLBACK_MODEL_NAME = "deepseek-flash"
+FALLBACK_MODEL_NAME = DEEPSEEK_MODEL
 
 
 def main() -> None:
-    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
-    config = {
-        name: os.getenv(name, "").strip()
-        for name in ("DEEPSEEK_API_KEY", "DEEPSEEK_BASE_URL")
-    }
-    missing = [name for name, value in config.items() if not value]
-    if missing:
-        raise ValueError(f"请在项目根目录的 .env 中配置：{', '.join(missing)}")
 
     # 1. 分别初始化模型，确保备用模型也使用项目配置的接口和凭证。
     def build_model(model_name: str):
         return init_chat_model(
             model=model_name,
             model_provider="deepseek",
-            api_key=config["DEEPSEEK_API_KEY"],
-            base_url=config["DEEPSEEK_BASE_URL"],
+            **deepseek_connection(require_base_url=True),
             extra_body={"thinking": {"type": "disabled"}},
         )
 

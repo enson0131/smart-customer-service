@@ -5,10 +5,9 @@
 示例使用虚构数据；邮箱仅在输出中脱敏，输入仍会传给模型。
 """
 
-import os
-from pathlib import Path
 
-from dotenv import load_dotenv
+from constants import DEEPSEEK_MODEL
+from constants.deepseek import deepseek_connection
 from langchain.agents import create_agent
 from langchain.agents.middleware import PIIMiddleware
 from langchain.agents.middleware.pii import PIIDetectionError
@@ -16,7 +15,6 @@ from langchain.chat_models import init_chat_model
 from langchain.messages import HumanMessage
 
 
-MODEL_NAME = "deepseek-flash"
 # 本例检测中国大陆手机号，支持 +86/86 前缀和常见的空格、短横线格式。
 # 数字边界避免将更长的数字串中的一部分误判为手机号。
 PHONE_PATTERN = r"(?<!\d)(?:\+?86[ -]?)?1[3-9]\d[ -]?\d{4}[ -]?\d{4}(?!\d)"
@@ -42,20 +40,11 @@ def create_pii_middleware() -> list[PIIMiddleware]:
 
 
 def main() -> None:
-    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
-    config = {
-        name: os.getenv(name, "").strip()
-        for name in ("DEEPSEEK_API_KEY", "DEEPSEEK_BASE_URL")
-    }
-    missing = [name for name, value in config.items() if not value]
-    if missing:
-        raise ValueError(f"请在项目根目录的 .env 中配置：{', '.join(missing)}")
 
     model = init_chat_model(
-        model=MODEL_NAME,
+        model=DEEPSEEK_MODEL,
         model_provider="deepseek",
-        api_key=config["DEEPSEEK_API_KEY"],
-        base_url=config["DEEPSEEK_BASE_URL"],
+        **deepseek_connection(require_base_url=True),
         extra_body={"thinking": {"type": "disabled"}},
     )
     

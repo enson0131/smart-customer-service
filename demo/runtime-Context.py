@@ -4,18 +4,16 @@
 依赖项目根目录 .env 中的 DEEPSEEK_API_KEY 和 DEEPSEEK_BASE_URL。
 """
 
-import os
 from dataclasses import dataclass
-from pathlib import Path
 
-from dotenv import load_dotenv
+from constants import DEEPSEEK_MODEL
+from constants.deepseek import deepseek_connection
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
 from langchain.messages import HumanMessage
 from langchain.tools import ToolRuntime, tool
 
 
-MODEL_NAME = "deepseek-flash"
 
 # 1. 模拟多租户数据库：不同学校可以存在相同的 user_id。
 USER_DATABASE = {
@@ -57,20 +55,11 @@ def get_current_user_profile(runtime: ToolRuntime[UserContext]) -> str:
 
 def main() -> None:
     # 使用绝对路径，从其他目录启动脚本也能加载项目配置。
-    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
-    config = {
-        name: os.getenv(name, "").strip()
-        for name in ("DEEPSEEK_API_KEY", "DEEPSEEK_BASE_URL")
-    }
-    missing = [name for name, value in config.items() if not value]
-    if missing:
-        raise ValueError(f"请在项目根目录的 .env 中配置：{', '.join(missing)}")
 
     model = init_chat_model(
-        model=MODEL_NAME,
+        model=DEEPSEEK_MODEL,
         model_provider="deepseek",
-        api_key=config["DEEPSEEK_API_KEY"],
-        base_url=config["DEEPSEEK_BASE_URL"],
+        **deepseek_connection(require_base_url=True),
         extra_body={"thinking": {"type": "disabled"}},
         timeout=30,
         max_retries=1,

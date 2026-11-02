@@ -6,11 +6,10 @@ InMemoryStore 可在当前进程中跨会话共享数据，进程退出后数据
 """
 
 import json
-import os
 from dataclasses import dataclass
-from pathlib import Path
 
-from dotenv import load_dotenv
+from constants import DEEPSEEK_MODEL
+from constants.deepseek import deepseek_connection
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
 from langchain.messages import HumanMessage
@@ -19,7 +18,6 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.store.memory import InMemoryStore
 
 
-MODEL_NAME = "deepseek-flash"
 PREFERENCE_KEY = "learning_preferences"
 
 
@@ -74,20 +72,11 @@ def get_learning_preferences(runtime: ToolRuntime[UserContext]) -> str:
 
 
 def main() -> None:
-    load_dotenv(Path(__file__).resolve().parents[1] / ".env")
-    config = {
-        name: os.getenv(name, "").strip()
-        for name in ("DEEPSEEK_API_KEY", "DEEPSEEK_BASE_URL")
-    }
-    missing = [name for name, value in config.items() if not value]
-    if missing:
-        raise ValueError(f"请在项目根目录的 .env 中配置：{', '.join(missing)}")
 
     model = init_chat_model(
-        model=MODEL_NAME,
+        model=DEEPSEEK_MODEL,
         model_provider="deepseek",
-        api_key=config["DEEPSEEK_API_KEY"],
-        base_url=config["DEEPSEEK_BASE_URL"],
+        **deepseek_connection(require_base_url=True),
         extra_body={"thinking": {"type": "disabled"}},
         timeout=30,
         max_retries=1,

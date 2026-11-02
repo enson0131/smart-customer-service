@@ -1,0 +1,63 @@
+:root { font: 15px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif; color:#252834; --blue:#466bf3; }
+* { box-sizing:border-box; }
+body { margin:0; display:flex; height:100dvh; background:white; }
+button,textarea { font:inherit; color:inherit; }
+button { cursor:pointer; border:0; background:transparent; }
+button:focus-visible,textarea:focus-visible { outline:2px solid var(--blue); outline-offset:2px; }
+button:disabled { opacity:.55; cursor:wait; }
+.symbols { position:absolute; width:0; height:0; }
+aside { width:238px; flex:none; padding:26px 16px 14px; background:#f8f9fc; display:flex; flex-direction:column; border-right:1px solid #eff0f4; }
+.brand { display:flex; align-items:center; gap:10px; font-weight:700; font-size:21px; letter-spacing:-.04em; }
+.brand svg { width:32px; height:32px; }
+.group-label { margin:34px 10px 8px; color:#717686; font-size:12px; }
+.active,aside button { padding:10px 14px; border-radius:10px; text-align:left; }
+.active { color:#3559c7; background:#e9eeff; font-weight:600; }
+aside button { display:flex; align-items:center; gap:12px; width:100%; }
+aside button:hover { background:#eef0f5; }
+nav svg,.tools svg { width:18px; height:18px; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linejoin:round; stroke-linecap:round; }
+.visitor { margin-top:auto; border-top:1px solid #e3e5ed; padding:16px 5px 0; display:flex; align-items:center; gap:10px; }
+.visitor span { border-radius:50%; background:#e7eafa; color:#566596; padding:4px 10px; }
+main { min-width:0; flex:1; display:flex; flex-direction:column; }
+header { display:flex; align-items:center; gap:10px; padding:16px 24px; }
+header span,.tools span { font-size:12px; border-radius:14px; padding:2px 9px; background:#f1f4ff; color:#4b62a1; }
+.workspace { flex:1; min-height:0; display:flex; flex-direction:column; justify-content:center; align-items:center; padding:0 20px; }
+.welcome { text-align:center; margin-bottom:26px; }
+.hero-mark { width:54px; height:54px; }
+h1 { font-size:clamp(25px,3vw,34px); letter-spacing:-.045em; margin:10px 0 5px; }
+.welcome p,footer { color:#717581; margin:0; }
+.composer,#log { width:min(100%,760px); }
+form { background:#f8f9fc; border:1px solid #dfe2eb; border-radius:23px; padding:15px 16px 11px; box-shadow:0 2px 8px #17275308; }
+form:focus-within { border-color:#a6b7fd; }
+textarea { display:block; width:100%; resize:none; border:0; background:none; }
+textarea:focus-visible { outline:none; }
+.tools,.chips { display:flex; align-items:center; gap:8px; }
+.tools { justify-content:space-between; }
+.tools span { background:#edf0f7; color:#596174; }
+.tools i { display:inline-block; width:6px; height:6px; margin-right:6px; background:var(--blue); border-radius:50%; }
+.tools button { display:grid; place-items:center; width:34px; height:34px; border-radius:50%; background:var(--blue); color:white; }
+.chips { flex-wrap:wrap; justify-content:center; margin-top:15px; }
+.chips button,article button { background:white; border:1px solid #dfe2eb; border-radius:15px; padding:5px 12px; font-size:13px; }
+.chips button:hover,article button:hover { background:#f1f5ff; color:#345acb; }
+footer { padding:10px; text-align:center; font-size:11px; }
+#log { display:none; }
+.chatting .welcome { display:none; }
+.chatting #log { display:block; overflow-y:auto; flex:1; padding:16px 6px; }
+article { margin:0 0 24px; overflow-wrap:anywhere; }
+article p { white-space:pre-line; margin:5px 0; }
+article.user { margin-left:auto; width:fit-content; max-width:85%; background:#edf2ff; padding:6px 15px; border-radius:16px; }
+.user strong { display:none; }
+article > strong { font-size:13px; color:#425bc0; }
+article b { font-size:12px; color:#63708c; }
+blockquote { margin:10px 0; border-left:3px solid #b1c2ff; background:#f7f8fc; padding:9px 14px; font-size:14px; }
+article button { display:block; margin:7px 0; text-align:left; }
+.chatting .chips { display:none; }
+@media (max-width:720px) {
+  aside { display:none; }
+  header { padding:12px 16px; }
+  .workspace { padding:0 12px; }
+  .chips { gap:5px; }
+  .chips button { font-size:12px; padding:5px 8px; }
+  .chatting .chips { display:flex; margin-top:6px; }
+  footer { padding:7px; }
+}
+@media (max-height:500px) { .hero-mark,.welcome p { display:none; } .welcome { margin-bottom:8px; } }

@@ -4,3 +4,9 @@
 # 项目本地 Python 解释器和虚拟环境
 /.python/
 /.venv/
+
+/data/
+__pycache__/
+node_modules/
+.wrangler/
+.dev.vars

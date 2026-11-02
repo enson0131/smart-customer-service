@@ -1,33 +1,21 @@
 """使用 Agent 流式输出模型回复。"""
 
-import os
-from pathlib import Path
 
-from dotenv import load_dotenv
+from constants import DEEPSEEK_MODEL
+from constants.deepseek import deepseek_connection
 from langchain.agents import create_agent
 from langchain.chat_models import init_chat_model
 from langchain.messages import HumanMessage
 
 
-MODEL_NAME = "deepseek-flash"
 
 # 从项目根目录读取凭证和接口地址，模型名称直接在代码中配置。
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
-
-config = {
-    name: os.getenv(name, "").strip()
-    for name in ("DEEPSEEK_API_KEY", "DEEPSEEK_BASE_URL")
-}
-missing = [name for name, value in config.items() if not value]
-if missing:
-    raise ValueError(f"请在项目根目录的 .env 中配置：{', '.join(missing)}")
 
 # 1. 初始化模型，关闭思考模式。
 model = init_chat_model(
-    model=MODEL_NAME,
+    model=DEEPSEEK_MODEL,
     model_provider="deepseek",
-    api_key=config["DEEPSEEK_API_KEY"],
-    base_url=config["DEEPSEEK_BASE_URL"],
+    **deepseek_connection(require_base_url=True),
     extra_body={"thinking": {"type": "disabled"}},
 )
 

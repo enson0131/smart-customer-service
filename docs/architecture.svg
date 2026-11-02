@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="830" viewBox="0 0 920 830" role="img" aria-labelledby="title desc">
+<title id="title">AI 售后客服系统 · 分层架构</title>
+<desc id="desc">从上到下依次为意图识别层、模型编排层、模型层、领域能力层和存储层。箭头表示架构层次顺序。</desc>
+<style>
+text{font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;fill:#172c49}
+.heading{font-size:26px;font-weight:650}.detail{font-size:17px;fill:#405570}
+.path{font:14px Menlo,Consolas,monospace;fill:#546d8b}.num{font:600 18px Menlo,monospace;fill:#fff}
+</style>
+<defs><marker id="down" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 1 9 5 0 9Z" fill="#6683a8"/></marker></defs>
+<rect width="920" height="830" fill="#f3f6fa"/>
+<text x="50" y="62" font-size="34" font-weight="700">AI 售后客服系统 · 分层架构</text>
+<text x="51" y="98" font-size="17" fill="#546d8b">以用户意图为入口，自上而下划分五层职责</text>
+<g transform="translate(50 130)">
+<rect width="820" height="104" rx="14" fill="#fff" stroke="#c8d5e5"/>
+<rect x="22" y="21" width="53" height="61" rx="10" fill="#28568b"/>
+<text class="num" x="48" y="58" text-anchor="middle">01</text>
+<text class="heading" x="98" y="43">意图识别层</text>
+<text class="path" x="796" y="40" text-anchor="end">service/intent/</text>
+<text class="detail" x="98" y="76">理解用户问题与上下文，识别指代，提取目标订单和工具参数。</text>
+</g>
+<path d="M460 236v23" stroke="#6683a8" stroke-width="2" marker-end="url(#down)"/>
+<g transform="translate(50 266)">
+<rect width="820" height="104" rx="14" fill="#fff" stroke="#c8d5e5"/>
+<rect x="22" y="21" width="53" height="61" rx="10" fill="#28568b"/>
+<text class="num" x="48" y="58" text-anchor="middle">02</text>
+<text class="heading" x="98" y="43">模型编排层</text>
+<text class="path" x="796" y="40" text-anchor="end">service/orchestration/</text>
+<text class="detail" x="98" y="76">通过 LangGraph 管理对话状态，决定何时追问、调用工具或返回结果。</text>
+</g>
+<path d="M460 372v23" stroke="#6683a8" stroke-width="2" marker-end="url(#down)"/>
+<g transform="translate(50 402)">
+<rect width="820" height="104" rx="14" fill="#fff" stroke="#c8d5e5"/>
+<rect x="22" y="21" width="53" height="61" rx="10" fill="#28568b"/>
+<text class="num" x="48" y="58" text-anchor="middle">03</text>
+<text class="heading" x="98" y="43">模型层</text>
+<text class="path" x="796" y="40" text-anchor="end">service/model/</text>
+<text class="detail" x="98" y="76">通过 LangChain 接入 DeepSeek，支持工具选择和基于资料的回答生成。</text>
+</g>
+<path d="M460 508v23" stroke="#6683a8" stroke-width="2" marker-end="url(#down)"/>
+<g transform="translate(50 538)">
+<rect width="820" height="104" rx="14" fill="#fff" stroke="#c8d5e5"/>
+<rect x="22" y="21" width="53" height="61" rx="10" fill="#28568b"/>
+<text class="num" x="48" y="58" text-anchor="middle">04</text>
+<text class="heading" x="98" y="43">领域能力层</text>
+<text class="path" x="796" y="40" text-anchor="end">service/domain/</text>
+<text class="detail" x="98" y="76">定义售后工具，提供政策检索、订单查询、退款资格核验与退款预览。</text>
+</g>
+<path d="M460 644v23" stroke="#6683a8" stroke-width="2" marker-end="url(#down)"/>
+<g transform="translate(50 674)">
+<rect width="820" height="104" rx="14" fill="#fff" stroke="#c8d5e5"/>
+<rect x="22" y="21" width="53" height="61" rx="10" fill="#28568b"/>
+<text class="num" x="48" y="58" text-anchor="middle">05</text>
+<text class="heading" x="98" y="43">存储层</text>
+<text class="path" x="796" y="40" text-anchor="end">service/storage/</text>
+<text class="detail" x="98" y="76">使用 SQLite 或 Cloudflare D1 保存会话、订单和退款申请。</text>
+</g>
+<text x="51" y="808" font-size="14" fill="#546d8b">箭头表示层次顺序。单次请求由编排层按需调度模型和领域能力。</text>
+</svg>
