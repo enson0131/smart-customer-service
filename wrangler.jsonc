@@ -1,16 +1,11 @@
 {
   "name": "smart-customer-service",
-  "main": "worker.mjs",
+  "account_id": "725b99e2985b12cc97d0bd43631787e6",
+  "main": "workers/index.ts",
   "compatibility_date": "2026-11-01",
-  "containers": [{
-    "class_name": "Aftercare",
-    "scheduling_policy": "durable_object",
-    "images": { "base": { "dockerfile": "./Dockerfile" } }
-  }],
-  "durable_objects": { "bindings": [{ "name": "SERVICE", "class_name": "Aftercare" }] },
-  "exports": { "Aftercare": { "type": "durable-object", "storage": "sqlite" } },
-  "vars": {
-    "CF_ACCOUNT_ID": "replace-with-account-id",
-    "D1_DATABASE_ID": "replace-with-database-id"
-  }
+  "compatibility_flags": ["nodejs_compat"],
+  "minify": true,
+  "build": {"command":"python3 -m scripts.worker_knowledge"},
+  "assets": {"directory":"./service/static","binding":"ASSETS"},
+  "d1_databases": [{"binding":"DB","database_name":"smart-customer-service-db","database_id":"3dbc49b0-322b-4513-9baf-27a94edb6835"}]
 }

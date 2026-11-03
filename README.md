@@ -30,11 +30,13 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com
 
 | 职责 | 代码入口 | 负责的决定 |
 | --- | --- | --- |
-| 意图识别 | `service/intent/` | 精确匹配完整指令或按钮操作，其他请求进入客服 Agent。 |
-| 模型编排 | `service/orchestration/` | LangGraph 分流；LangChain create_agent 管理模型和工具之间的消息循环。 |
-| 模型接入 | `service/model/` | 通过 LangChain 初始化 DeepSeek、绑定工具、发起工具选择和基于资料的回答生成。 |
-| 领域能力 | `service/domain/` | 定义工具，查询模拟履约、物流轨迹与签收回执，检索政策并核验退款资格。 |
-| 存储 | `service/storage/` | 通过 SQLite 或 Cloudflare D1 保存访客会话、对话记录、订单、退款申请和待续办任务。 |
+| 意图识别 | `service/intent/` · `workers/intent/` | 精确匹配完整指令或按钮操作，其他请求进入客服 Agent。 |
+| 模型编排 | `service/orchestration/` · `workers/orchestration/` | LangGraph 分流；LangChain create_agent 管理模型和工具之间的消息循环。 |
+| 模型接入 | `service/model/` · `workers/model/` | 通过 LangChain 初始化 DeepSeek、绑定工具、发起工具选择和基于资料的回答生成。 |
+| 领域能力 | `service/domain/` · `workers/domain/` | 定义工具，查询模拟履约、物流轨迹与签收回执，检索政策并核验退款资格。 |
+| 存储 | `service/storage/` · `workers/storage/` | 通过 SQLite 或 Cloudflare D1 保存访客会话、对话记录、订单、退款申请和待续办任务。 |
+
+本地 FastAPI 使用 Python。免费 Workers 使用 TypeScript 的 `createAgent`，由 HTTP 入口匹配按钮和完整指令，自由输入交给原生 Agent。两端共用网页、知识库和 SQL 表结构。以下流程图由 Python 实现导出。
 
 ### LangGraph 执行流程
 
@@ -99,29 +101,18 @@ jq 'select(.task_id == "替换为任务编号" and (.event | startswith("model."
 
 提交取消消息或重新选择订单会作废旧确认卡。确认时数据库再次检查归属、签收日期和有效票据，每笔订单最多创建一个退款申请。演示访客身份仅适合虚构数据。
 
-## Cloudflare Containers 与 D1
+## Cloudflare Workers 免费版与 D1
 
-通过 GitHub 连接 Workers Builds 时，Project name 填 `smart-customer-service`，与 `wrangler.jsonc` 的 Worker 名称一致。
-
-准备启用 Containers 的 Cloudflare 账户、Docker 引擎及 Wrangler 4.151.0。在项目根目录执行以下命令（也可使用 `npx wrangler@4.151.0` 代替 `wrangler`）：
+正式环境使用 TypeScript Worker、静态资源绑定和 D1。Workers Builds 连接 GitHub 仓库，项目名填 `smart-customer-service`，生产分支为 `main`，根目录为仓库根目录。Build command 留空，Deploy command 填 `npx wrangler@4.151.0 deploy`。Wrangler 的构建钩子会用 Python 标准库读取 `knowledge/` 的 Markdown 和 TXT 并生成检索索引。
 
 ```sh
-wrangler login
-wrangler d1 create spruce-aftercare-db
-# 已部署的 D1 也需执行此幂等脚本，创建 graph_checkpoints 和 graph_writes 等表
-wrangler d1 execute spruce-aftercare-db --remote --file service/storage/schema.sql
+npm ci
+python3 -m scripts.worker_knowledge
+npm run check
+npx wrangler@4.151.0 d1 execute smart-customer-service-db --remote --file service/storage/schema.sql
+npx wrangler@4.151.0 secret put DEEPSEEK_API_KEY
+npx wrangler@4.151.0 secret put DEEPSEEK_BASE_URL
+npx wrangler@4.151.0 deploy
 ```
 
-在 `wrangler.jsonc` 的 `vars` 中填写账户 ID 和创建命令返回的数据库 ID。容器通过 D1 HTTP API 使用同一份 SQL 表结构。创建仅授予目标账户 D1 编辑权限的 API Token，以 Worker Secret 保存。首次设置 Secret 若提示创建同名 Worker，可确认创建。
-
-```sh
-wrangler secret put D1_API_TOKEN
-# 必填，更新密钥后重新启动容器以读取新值
-wrangler secret put DEEPSEEK_API_KEY
-wrangler deploy --dry-run
-wrangler deploy
-```
-
-Worker 启动容器时传入数据库配置和 Secrets，等待 8080 端口就绪后转发同源请求。云端强制使用 D1，访客、选中订单和退款记录均跨容器重启保存。通过部署返回的 HTTPS 地址访问服务台，完成一次模拟退款，再次访问验证进度。容器本机文件仅存放静态网页与随镜像发布的知识库。
-
-部署参考：[Cloudflare 容器与 Secrets](https://developers.cloudflare.com/containers/examples/env-vars-and-secrets/)、[D1 HTTP API](https://developers.cloudflare.com/d1/worker-api/rest-api/)。
+首次在其他账户部署时先创建 D1，在 Wrangler 配置中替换账户和数据库 ID。DeepSeek 使用 Worker 运行时 Secrets，模型名在 `workers/constants/`。订单、模拟退款和 LangGraph 检查点通过 D1 绑定读写。选单后继续同一访客线程，确认接口会重新核验订单与票据。[Cloudflare Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/) · [D1 Workers Binding](https://developers.cloudflare.com/d1/worker-api/d1-database/)
