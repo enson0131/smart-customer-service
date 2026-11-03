@@ -10,7 +10,7 @@ export function modelFor(env: Settings) {
     apiKey: env.DEEPSEEK_API_KEY,
     model: MODEL,
     timeout: 55000,
-    maxRetries: 1,
+    maxRetries: 0,
     configuration: {
       baseURL: env.DEEPSEEK_BASE_URL || "https://api.deepseek.com",
     },

@@ -48,7 +48,11 @@ const sequential = createMiddleware({
     );
     let msg;
     try {
-      msg = await next(req);
+      const hasObservation = last && ToolMessage.isInstance(last);
+      msg = await next(hasObservation ? {
+        ...req,
+        modelSettings: { ...req.modelSettings, maxRetries: 0, options: { timeout: 12000 } },
+      } : req);
     } catch (error) {
       // 上游生成最终答复失败时，仍可展示本轮已经核实的事实和确认卡。
       const facts = req.messages.filter(ToolMessage.isInstance)
