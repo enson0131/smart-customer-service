@@ -14,8 +14,35 @@ def next_action(model, session, goal, history, observations, supplement):
         "用户补充可能回答先前问题，也可能改变目标，优先遵循最新明确请求。",
         {"用户消息": goal, "用户补充": supplement, "选中订单": session["selected"],
          "话题": session["topic"], "最近对话": history, "工具观察": observations})
-    if len(calls) != 1:
-        raise ValueError("每轮决策只能选择一个动作")
-    call = calls[0]
-    args = TOOLS[call["name"]].model_validate(call["args"]).model_dump()
-    return {"name": call["name"], "args": args}
+    if not calls:
+        raise ValueError("模型没有返回工具调用")
+    # 有些模型会一次提出多个动作。先校验整组，再执行一个；
+    # 其余候选交给下一轮根据真实观察重新决定。
+    candidates = []
+    for call in calls:
+        name = call["name"]
+        args = TOOLS[name].model_validate(call["args"]).model_dump()
+        candidates.append({"name": name, "args": args})
+    if len(candidates) == 1:
+        return candidates[0]
+    if any(item["name"] in {"cancel", "clarify"} for item in candidates):
+        return {"name": "clarify", "args": {"question": "请告诉我想先办理哪一项操作。"}}
+
+    for candidate in candidates:
+        if candidate["name"] == "finish":
+            continue
+        # 用户选单后，此前省略的订单号与当前选中的订单可能指同一笔。
+        def same_action(observation):
+            if observation["tool"] != candidate["name"]:
+                return False
+            previous = dict(observation["args"])
+            current = dict(candidate["args"])
+            if "order_id" in current:
+                current["order_id"] = current["order_id"] or session["selected"]
+                previous["order_id"] = observation["facts"].get("order_id") or previous.get("order_id")
+            return current == previous
+        if not any(same_action(item) for item in observations):
+            return candidate
+    if observations and any(item["name"] == "finish" for item in candidates):
+        return {"name": "finish", "args": {}}
+    raise ValueError("模型未提出新的工具动作")

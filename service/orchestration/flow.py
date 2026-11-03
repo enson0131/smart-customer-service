@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import TypedDict
 
 from langgraph.types import interrupt
@@ -99,13 +100,16 @@ def build_flow(store, knowledge, model, checkpointer=None):
                 return {"destination": "summarize"}
             if step["name"] == "finish" or step in state["steps"] or len(observations) >= MAX_REACT_STEPS:
                 raise ValueError("没有新的可执行步骤")
-        except Exception:
+        except Exception as error:
+            logging.getLogger(__name__).warning("ReAct decision failed: %s (observations=%d)",
+                                                type(error).__name__, len(observations))
             if observations and len(observations) < MAX_REACT_STEPS:
                 return {"step": {"name": "clarify", "args": {"question": "暂时无法继续核实其余事项，请稍后重试。"}},
                         "destination": "act"}
-            # 已取得的证据仍随回复展示，明确提示未能继续的部分。
+            # 区分首步失败与已有部分结果，避免暗示尚未执行的查询已经完成。
+            message = "暂时无法识别这次请求，请稍后重试。" if not observations else "暂时无法继续核实其余事项，请稍后重试。"
             return {"destination": "summarize", "steps": state["steps"] + [{"name": "clarify"}],
-                    "results": state["results"] + [Outcome("clarify", {"question": "暂时无法继续核实其余事项，请稍后重试。"})]}
+                    "results": state["results"] + [Outcome("clarify", {"question": message})]}
         return {"step": step, "destination": "act"}
 
     def orders(s):

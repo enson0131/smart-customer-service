@@ -83,6 +83,24 @@ class ReactTest(unittest.TestCase):
         self.assertFalse(db.sql("SELECT visitor FROM pending_tasks"))
         self.assertFalse(db.sql("SELECT id FROM refunds"))
 
+    def test_multiple_proposals_still_execute_one_step_per_observation(self):
+        original = self.model.invoke
+        observed = []
+        def propose(messages):
+            context = json.loads(messages[-1][1])
+            if "工具观察" not in context:
+                return original(messages)
+            seen = [item["tool"] for item in context["工具观察"]]
+            observed.append(seen)
+            names = ["finish"] if "preview" in seen else ["track_shipment", "preview"]
+            return SimpleNamespace(tool_calls=[{"name": name, "args": {}} for name in names])
+        self.model.invoke = propose
+        first = self.send("查物流，再看看能不能退")
+        result = self.send(first["orders"][0]["id"], True)
+        self.assertEqual(observed, [[], ["track_shipment"], ["track_shipment", "preview"]])
+        self.assertIn("模拟物流", result["text"])
+        self.assertEqual(result["card"]["order_id"], first["orders"][0]["id"])
+
     def test_native_interrupt_remains_at_act_until_valid_resume(self):
         pending = self.send("查物流")
         visitor = self.client.cookies[VISITOR_COOKIE]
