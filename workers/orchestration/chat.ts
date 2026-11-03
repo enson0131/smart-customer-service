@@ -67,6 +67,13 @@ const sequential = createMiddleware({
       "model.response",
       JSON.stringify({ content: msg.content, calls: msg.tool_calls }),
     );
+    const observations = req.messages.filter(ToolMessage.isInstance);
+    const hasOrder = observations.some(m => ["track_shipment", "check_fulfillment", "check_delivery_receipt"].includes(m.name || ""));
+    // 对具体订单的资格结论，要求先取得领域工具的结果。仅查通用政策不能据此判单。
+    if (!msg.tool_calls?.length && hasOrder && !observations.some(m => m.name === "preview_refund") &&
+        /(?:能|可|符合|不支持|不能|无法|不符合|超过|超出).{0,12}(?:退货|退款|退回|退)/.test(String(msg.content))) {
+      return dispatch([{name:"preview_refund", args:{}, id:"call_"+crypto.randomUUID()}]);
+    }
     if ((msg.tool_calls?.length ?? 0) <= 1) return msg;
     return dispatch(msg.tool_calls!);
   },
@@ -100,7 +107,7 @@ export async function chat(
     middleware: [sequential],
     checkpointer: saver,
     systemPrompt:
-      "你是中文售后演示客服。订单、物流、退款和政策必须先查对应工具，只根据工具事实回复。多个诉求按顺序逐项查完。用户未明确订单号时直接调用所需工具，省略 order_id，工具会让用户选单。禁止猜选订单。退款只可预览，点击确认才提交。",
+      "你是中文售后演示客服。订单、物流、退款和政策必须先查对应工具，只根据工具事实回复。多个诉求按顺序逐项查完。用户问某一单能不能退，必须调用 preview_refund，禁止用政策或日期自行推算。比如“查物流，再看看能不能退”，调用 track_shipment 和 preview_refund。用户未明确订单号时直接调用所需工具，省略 order_id，工具会让用户选单。禁止猜选订单。退款只可预览，点击确认才提交。",
   });
   const graph = agent.graph;
   let snap = await graph.getState(cfg);
@@ -151,9 +158,15 @@ export async function chat(
     if (msg.artifact) Object.assign(artifacts, msg.artifact);
     if (msg.name === "list_orders") artifacts.orders = orders;
   }
-  const text = String(
+  let text = String(
     result.messages.at(-1)?.content || "暂时无法核实，请稍后重试。",
   );
+  const observations = result.messages.filter(ToolMessage.isInstance).filter(m => m.status !== "error");
+  if (observations.some(m => m.name === "preview_refund")) {
+    // 资格、金额与确认方式由后端负责，避免模型改写已核实的结论。
+    text = observations.filter(m => !["list_orders", "search_policy"].includes(m.name || ""))
+      .map(m => String(m.content)).join("\n");
+  }
   const original = result.messages.filter((m) => m.type === "human").at(-1);
   await store.db
     .prepare("INSERT INTO chat_turns(visitor,message,answer) VALUES (?,?,?)")
