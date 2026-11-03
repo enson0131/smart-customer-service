@@ -101,6 +101,8 @@ jq 'select(.task_id == "替换为任务编号" and (.event | startswith("model."
 
 ## Cloudflare Containers 与 D1
 
+通过 GitHub 连接 Workers Builds 时，Project name 填 `smart-customer-service`，与 `wrangler.jsonc` 的 Worker 名称一致。
+
 准备启用 Containers 的 Cloudflare 账户、Docker 引擎及 Wrangler 4.151.0。在项目根目录执行以下命令（也可使用 `npx wrangler@4.151.0` 代替 `wrangler`）：
 
 ```sh
