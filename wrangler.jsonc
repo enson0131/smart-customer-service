@@ -5,7 +5,13 @@
   "compatibility_date": "2026-11-01",
   "compatibility_flags": ["nodejs_compat"],
   "minify": true,
-  "build": {"command":"python3 -m scripts.worker_knowledge"},
-  "assets": {"directory":"./service/static","binding":"ASSETS"},
-  "d1_databases": [{"binding":"DB","database_name":"smart-customer-service-db","database_id":"3dbc49b0-322b-4513-9baf-27a94edb6835"}]
+  "build": { "command": "python3 -m scripts.worker_knowledge" },
+  "assets": { "directory": "./service/static", "binding": "ASSETS" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "smart-customer-service-db",
+      "database_id": "3dbc49b0-322b-4513-9baf-27a94edb6835",
+    },
+  ],
 }
