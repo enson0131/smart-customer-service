@@ -16,9 +16,6 @@ CREATE TABLE IF NOT EXISTS chat_turns (
     message TEXT NOT NULL, answer TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS chat_turns_visitor ON chat_turns(visitor,id);
-CREATE TABLE IF NOT EXISTS pending_tasks (
-    visitor TEXT PRIMARY KEY REFERENCES visitors(id), snapshot TEXT NOT NULL
-);
 
 -- LangGraph checkpointer: completed conversations remain in chat_turns.
 CREATE TABLE IF NOT EXISTS graph_checkpoints (

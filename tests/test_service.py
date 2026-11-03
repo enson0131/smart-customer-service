@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from types import SimpleNamespace
+from fake_chat import TestChatModel, goal_and_tools
 
 from fastapi.testclient import TestClient
 
@@ -25,19 +25,12 @@ class ScriptedModel:
             "取消这个订单": [("clarify", {"question": "订单不支持撤销。"})],
         }
 
-    def bind_tools(self, tools):
-        return self
-
     def invoke(self, messages):
-        context = json.loads(messages[-1][1])
-        if "用户消息" not in context:
-            return SimpleNamespace(content="")
-        latest = context["用户补充"]
-        message = latest if latest in self.plans else context["用户消息"]
-        steps = self.plans[message]
-        index = len(context["工具观察"])
-        name, args = steps[index] if index < len(steps) else ("finish", {})
-        return SimpleNamespace(tool_calls=[{"name": name, "args": args}])
+        goal, tools = goal_and_tools(messages)
+        if goal.startswith("{"):
+            return ""
+        steps = self.plans[goal]
+        return [steps[len(tools)]] if len(tools) < len(steps) else ""
 
 
 class SupportTest(unittest.TestCase):
@@ -49,7 +42,7 @@ class SupportTest(unittest.TestCase):
         self.client = self.open_client()
 
     def open_client(self, model=None):
-        client = TestClient(create_app(self.db, lambda: self.model if model is None else model))
+        client = TestClient(create_app(self.db, lambda: TestChatModel(responder=lambda messages: (model or self.model).invoke(messages))))
         client.__enter__()
         self.addCleanup(client.__exit__, None, None, None)
         return client
@@ -122,16 +115,12 @@ class SupportTest(unittest.TestCase):
         expected = "查到了你的云杉阅读灯订单，但订单里没有单列运费。"
         class Model(ScriptedModel):
             def invoke(self, messages):
-                data = json.loads(messages[-1][1])
-                if "已核实结果" in data:
-                    assert data["客户问题"] == message
-                    selected, shipping = data["已核实结果"]
-                    assert selected["facts"]["product"] == order["product"]
-                    assert shipping == {"tool": "shipping_cost", "status": "unavailable",
-                                        "facts": {"reason": "order_has_no_shipping_fee_field"}}
-                    if self.timeout:
-                        raise TimeoutError
-                    return SimpleNamespace(content=expected)
+                goal, tools = goal_and_tools(messages)
+                if len(tools) == 2:
+                    assert goal == message
+                    assert json.loads(tools[0].content)["facts"]["product"] == order["product"]
+                    assert json.loads(tools[1].content)["status"] == "unavailable"
+                    return "" if self.timeout else expected
                 return super().invoke(messages)
 
         model = Model()
@@ -187,31 +176,19 @@ class SupportTest(unittest.TestCase):
             for message in ("不要查看我的订单", "查看我的订单，然后查询退款进度"):
                 self.model.plans[message] = [("clarify", {"question": "已收到完整请求"})]
                 self.assertEqual(self.chat(message)["text"], "已收到完整请求")
-                context = json.loads(invoke.call_args.args[0][-1][1])
-                self.assertIn(message, (context["用户消息"], context["用户补充"]))
+                self.assertEqual(goal_and_tools(invoke.call_args.args[0])[0], message)
             self.assertEqual(invoke.call_count, 2)
 
     def test_model_routing_and_failure(self):
         class Model:
-            def bind_tools(self, tools):
-                class Selector:
-                    def invoke(self, messages):
-                        import json
-                        context = json.loads(messages[-1][1])
-                        msg = context["用户消息"]
-                        name, args = "orders", {}
-                        if "寄回" in msg:
-                            assert context["最近对话"] and context["选中订单"]
-                            name, args = "preview", {"reason": "打算寄回"}
-                        elif "运费" in msg:
-                            name, args = "policy", {"query": msg}
-                        if context["工具观察"]:
-                            name, args = "finish", {}
-                        return SimpleNamespace(tool_calls=[{"name": name, "args": args}])
-                return Selector()
-
             def invoke(self, messages):
-                return SimpleNamespace(content="质量问题的退货运费由商家承担。")
+                goal, tools = goal_and_tools(messages)
+                if goal.startswith("{"):
+                    return "质量问题的退货运费由商家承担。"
+                if tools:
+                    return ""
+                assert any("当前会话选中订单" in m.content for m in messages)
+                return [("preview", {})]
 
         client = self.open_client(Model())
         order = self.chat("查看我的订单", client)["orders"][0]

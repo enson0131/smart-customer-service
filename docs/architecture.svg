@@ -25,7 +25,7 @@ text{font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;f
 <text class="num" x="48" y="58" text-anchor="middle">02</text>
 <text class="heading" x="98" y="43">模型编排层</text>
 <text class="path" x="796" y="40" text-anchor="end">service/orchestration/</text>
-<text class="detail" x="98" y="76">LangGraph 驱动 ReAct 循环，以 interrupt 等待用户，恢复后继续执行。</text>
+<text class="detail" x="98" y="76">LangGraph 负责入口分流，create_agent 管理消息和工具循环。</text>
 </g>
 <path d="M460 372v23" stroke="#6683a8" stroke-width="2" marker-end="url(#down)"/>
 <g transform="translate(50 402)">

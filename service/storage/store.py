@@ -1,4 +1,3 @@
-import json
 import os
 import secrets
 import sqlite3
@@ -62,13 +61,6 @@ class Store:
 
     def orders(self, visitor):
         return self.sql("SELECT id,product,cents,delivered FROM orders WHERE visitor=? ORDER BY rowid", visitor)
-
-    def pending_task(self, visitor):
-        rows = self.sql("SELECT snapshot FROM pending_tasks WHERE visitor=?", visitor)
-        return json.loads(rows[0]["snapshot"]) if rows else None
-
-    def clear_task(self, visitor):
-        return bool(self.sql("DELETE FROM pending_tasks WHERE visitor=? RETURNING visitor", visitor))
 
     def recent_turns(self, visitor):
         rows = self.sql("SELECT message,answer FROM chat_turns WHERE visitor=? ORDER BY id DESC LIMIT 6", visitor)

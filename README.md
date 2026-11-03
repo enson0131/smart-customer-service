@@ -30,8 +30,8 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com
 
 | 职责 | 代码入口 | 负责的决定 |
 | --- | --- | --- |
-| 意图识别 | `service/intent/` | 精确匹配完整指令；其他请求连同工具观察交给模型，每次校验一个动作。 |
-| 模型编排 | `service/orchestration/` | LangGraph 调用意图识别，驱动 ReAct 循环，管理待选订单、任务恢复与回复汇总。 |
+| 意图识别 | `service/intent/` | 精确匹配完整指令或按钮操作，其他请求进入客服 Agent。 |
+| 模型编排 | `service/orchestration/` | LangGraph 分流；LangChain create_agent 管理模型和工具之间的消息循环。 |
 | 模型接入 | `service/model/` | 通过 LangChain 初始化 DeepSeek、绑定工具、发起工具选择和基于资料的回答生成。 |
 | 领域能力 | `service/domain/` | 定义工具，查询模拟履约、物流轨迹与签收回执，检索政策并核验退款资格。 |
 | 存储 | `service/storage/` | 通过 SQLite 或 Cloudflare D1 保存访客会话、对话记录、订单、退款申请和待续办任务。 |
@@ -49,17 +49,41 @@ mmdc -i docs/chat-flow.mmd -o docs/chat-flow.svg
 
 第二条命令使用 Mermaid CLI 渲染 SVG。导出图结构无需启动服务或调用 DeepSeek。
 
-1. `enter` 校验按钮或整句精确指令。例如“查看我的订单”直接进入 `act`，跳过模型决策。
-2. 自由输入进入 `reason`。DeepSeek 根据原始请求、最近六轮对话、选中订单和已完成工具的观察，选择一个动作。每次 `act` 执行后带着新的事实回到 `reason`，所有诉求处理完毕后选择 `finish`。每个任务最多执行 8 次正常工具动作，重复动作、无效输出或模型异常会停止并提示未能继续核实。
-3. 选单、澄清或需要用户重试时，`act` 调用 LangGraph 原生 `interrupt()` 返回提示。服务按访客身份设置 `thread_id`，下一条输入通过 `Command(resume=...)` 恢复同一执行。LangGraph 从被中断的节点开头重放，等待输入前的路径只读取业务数据。刷新后可用“查看我的订单”重新显示候选项；选单先校验候选范围和订单归属。
-   本地使用官方 `SqliteSaver`，Cloudflare D1 使用同一 checkpointer 协议的 SQL 适配器。服务重启后仍可恢复；一轮完成后清理图检查点，对话摘要继续保存在 `chat_turns`。
-4. `summarize` 根据已核实事实生成正文与页面卡片，`remember` 记录本轮对话。模型仅能预览退款；提交仍由独立确认接口执行。
+1. 外层 LangGraph 在 `intent` 分流。精确命中规则走 `direct`，自由输入交给 `create_agent` 创建的子图。
+2. Agent 接收系统提示和最近六轮对话的 `HumanMessage / AIMessage`。模型发起工具调用后，框架执行工具并追加 `ToolMessage`；模型根据实际结果继续调用工具或直接回答。工具返回的正文只含业务事实，订单卡片和确认票据保存在 `artifact` 中。一次提出多个工具时，每次放行一个，避免并发选择订单或生成多张退款卡。原生中间件限制每次运行的模型调用次数。
+3. 缺订单或需要澄清时，工具调用 `interrupt()`。服务校验选单归属，通过同一访客的 `thread_id` 和 `Command(resume=...)` 继续这次工具调用，随后由 Agent 处理剩余诉求。未完成任务持久化到 SQLite 或 D1。
+4. 外层将消息和业务结果组装成网页回复并保存本轮记录。退款确认仍使用独立 HTTP 接口，Agent 没有提交退款的工具。
 
 | 在网页输入 | 可以观察到的行为 |
 |---|---|
 | 查一下这单的物流 | 选单后返回该单的模拟轨迹。 |
 | 帮我查物流，再看看能不能退 | 指代不明时先选单，随后在同一次续办中展示物流及退款资格，符合条件时展示确认卡。 |
 | 我的包裹为什么还没到 | 模型可先查轨迹，再根据观察查询仓库交运记录或签收回执。当前数据均为演示记录。 |
+
+## 查看任务流转日志
+
+本地每次聊天请求返回（含等待选单）或报错时，服务会将当前 `data/logs/tasks.jsonl` 自动格式化到 `data/logs/tasks.pretty.json`。阅读副本按时间顺序排列并沿用原日志的脱敏结果；轮转前的记录可从 `tasks.jsonl.1` 等备份查看。
+
+开发人员可按问题发生时间和事件类型在服务端日志中定位请求，再用该行的 `task_id` 查询完整流程。用户选单、刷新候选项或重启服务后恢复中断时，沿用同一编号。
+
+在项目根目录执行：
+
+```sh
+# 实时查看本地流转
+tail -f data/logs/tasks.jsonl
+
+# 将编号替换为服务端日志中的 task_id，同时搜索最近的轮转文件
+rg --fixed-strings '粘贴任务日志编号' data/logs/
+```
+
+每行是一条 JSON 事件。`model.proposals` 是模型实际提出的工具；`tool.request` 给出实际执行的工具和参数；`tool.result` 是工具实际返回的状态。看到 `task.wait` 表示正在等人，`task.resume` 表示收到补充输入。LangGraph 恢复时会重放中断节点，因此同一任务中可能再次出现相同的工具观察。异常可查看 `decision.error` 或 `request.error` 的错误类型。
+
+本地日志每个文件最大 5 MiB，保留 3 份备份。Cloudflare D1 模式下同样的 JSON 事件写到容器标准输出。详细日志包含聊天正文。`chat.request/response` 对应聊天接口输入和页面回复，`tool.request/result` 对应工具参数、事实和组件结果，`model.request` 包含实际发送给模型的消息批次（含 system Prompt）及模型、工具定义等调用参数，`model.response` 包含回复正文、工具调用、结束原因和返回的 token 用量。按 `call_id` 配对同一次模型请求和响应。详情仅写入开发日志，过往事件不会补录。认证头不参与采集，访客标识和退款票据在落盘前脱敏。
+
+```sh
+# 用 jq 展开一条任务的多行 Prompt 和结构化入参、出参
+jq 'select(.task_id == "替换为任务编号" and (.event | startswith("model.")))' data/logs/tasks.jsonl
+```
 
 ## HTTP 接口
 

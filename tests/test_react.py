@@ -2,7 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from types import SimpleNamespace
+from fake_chat import TestChatModel, goal_and_tools
 
 from fastapi.testclient import TestClient
 
@@ -17,16 +17,10 @@ class DeliveryModel:
     def __init__(self):
         self.decisions = []
 
-    def bind_tools(self, tools):
-        return self
-
     def invoke(self, messages):
-        context = json.loads(messages[-1][1])
-        if "工具观察" not in context:
-            return SimpleNamespace(content="")
-        goal = context["用户消息"]
-        observations = context["工具观察"]
-        seen = [item["tool"] for item in observations]
+        goal, tools = goal_and_tools(messages)
+        observations = [json.loads(m.content) for m in tools]
+        seen = [m.name for m in tools]
         if not seen:
             name = "track_shipment"
         elif "能退" in goal and "preview" not in seen:
@@ -37,7 +31,7 @@ class DeliveryModel:
         else:
             name = "finish"
         self.decisions.append((goal, name))
-        return SimpleNamespace(tool_calls=[{"name": name, "args": {}}])
+        return "" if name == "finish" else [(name, {})]
 
 
 class ReactTest(unittest.TestCase):
@@ -49,7 +43,7 @@ class ReactTest(unittest.TestCase):
         self.client = self.open()
 
     def open(self):
-        client = TestClient(create_app(Store(self.path), lambda: self.model))
+        client = TestClient(create_app(Store(self.path), lambda: TestChatModel(responder=lambda messages: self.model.invoke(messages))))
         client.__enter__()
         self.addCleanup(client.__exit__, None, None, None)
         return client
@@ -80,20 +74,17 @@ class ReactTest(unittest.TestCase):
         self.assertEqual(result["card"]["order_id"], selected)
         self.assertEqual(self.model.decisions, [(goal, "track_shipment"), (goal, "preview"), (goal, "finish")])
         db = Store(self.path)
-        self.assertFalse(db.sql("SELECT visitor FROM pending_tasks"))
+        config = {"configurable": {"thread_id": self.client.cookies[VISITOR_COOKIE]}}
+        self.assertFalse(self.client.app.state.conversation.graph.get_state(config).interrupts)
         self.assertFalse(db.sql("SELECT id FROM refunds"))
 
     def test_multiple_proposals_still_execute_one_step_per_observation(self):
-        original = self.model.invoke
         observed = []
         def propose(messages):
-            context = json.loads(messages[-1][1])
-            if "工具观察" not in context:
-                return original(messages)
-            seen = [item["tool"] for item in context["工具观察"]]
+            _, tools = goal_and_tools(messages)
+            seen = [m.name for m in tools]
             observed.append(seen)
-            names = ["finish"] if "preview" in seen else ["track_shipment", "preview"]
-            return SimpleNamespace(tool_calls=[{"name": name, "args": {}} for name in names])
+            return "" if "preview" in seen else [("track_shipment", {}), ("preview", {})]
         self.model.invoke = propose
         first = self.send("查物流，再看看能不能退")
         result = self.send(first["orders"][0]["id"], True)
@@ -101,13 +92,44 @@ class ReactTest(unittest.TestCase):
         self.assertIn("模拟物流", result["text"])
         self.assertEqual(result["card"]["order_id"], first["orders"][0]["id"])
 
+    def test_task_log_follows_interrupt_across_requests(self):
+        goal = "帮我查物流，再看看能退吗"
+        response = self.client.post("/api/chat", json={"message": goal})
+        self.assertNotIn("X-Task-ID", response.headers)
+        order = response.json()["orders"][0]["id"]
+        client = self.open()
+        client.cookies.update(self.client.cookies)
+        resumed = client.post("/api/chat", json={
+            "message": order, "action": {"kind": "select_order", "order_id": order}})
+        self.assertNotIn("X-Task-ID", resumed.headers)
+        log = (self.path.parent / "logs/tasks.jsonl").read_text()
+        rows = [json.loads(line) for line in log.splitlines()]
+        task_id = rows[0]["task_id"]
+        self.assertEqual({row["task_id"] for row in rows}, {task_id})
+        self.assertNotIn(task_id, response.text)
+        self.assertNotIn(task_id, resumed.text)
+        events = [row["event"] for row in rows]
+        for name in ("task.start", "node.start", "model.proposals", "tool.result", "node.interrupt",
+                     "task.wait", "task.resume", "node.end", "task.end"):
+            self.assertIn(name, events)
+        self.assertLess(events.index("task.wait"), events.index("task.resume"))
+        self.assertEqual(next(row["message"] for row in rows if row["event"] == "chat.request"), goal)
+        self.assertEqual(next(row for row in reversed(rows) if row["event"] == "chat.response")["reply"]["card"]["ticket"],
+                         "[REDACTED]")
+        self.assertNotIn(client.cookies[VISITOR_COOKIE], log)
+        self.assertNotIn(resumed.json()["card"]["ticket"], log)
+        new = client.post("/api/chat", json={"message": "查看我的订单"})
+        self.assertEqual(new.status_code, 200)
+        last = (self.path.parent / "logs/tasks.jsonl").read_text().splitlines()[-1]
+        self.assertNotEqual(task_id, json.loads(last)["task_id"])
+
     def test_native_interrupt_remains_at_act_until_valid_resume(self):
         pending = self.send("查物流")
         visitor = self.client.cookies[VISITOR_COOKIE]
         config = {"configurable": {"thread_id": visitor}}
         graph = self.client.app.state.conversation.graph
         snapshot = graph.get_state(config)
-        self.assertEqual(snapshot.next, ("act",))
+        self.assertEqual(snapshot.next, ("agent",))
         self.assertNotIn("pause", graph.get_graph().nodes)
         interrupt_id = snapshot.interrupts[0].id
         self.assertEqual(snapshot.interrupts[0].value["reply"], pending)
@@ -123,8 +145,8 @@ class ReactTest(unittest.TestCase):
         self.send(order["id"], True)
         invoke = self.model.invoke
         def fail_once(messages):
-            data = json.loads(messages[-1][1])
-            if data.get("工具观察"):
+            _, tools = goal_and_tools(messages)
+            if tools:
                 self.model.invoke = invoke
                 raise TimeoutError
             return invoke(messages)

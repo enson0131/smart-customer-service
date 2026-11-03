@@ -13,6 +13,7 @@ from .orchestration.conversation import Conversation
 from .orchestration.flow import build_flow
 from .model.deepseek import configured_model
 from .storage.store import Store
+from .task_log import task_logger
 
 class SelectOrder(BaseModel):
     kind: Literal["select_order"]
@@ -37,9 +38,10 @@ def create_app(store=None, model_factory=configured_model):
     async def lifespan(app):
         model = model_factory()
         app.state.db = store or Store()
-        with open_checkpointer(app.state.db) as saver:
+        log_dir = None if app.state.db.remote else app.state.db.path.parent / "logs"
+        with open_checkpointer(app.state.db) as saver, task_logger(log_dir) as logger:
             graph = build_flow(app.state.db, Knowledge(PROJECT_ROOT / "knowledge"), model, saver)
-            app.state.conversation = Conversation(graph, app.state.db, saver)
+            app.state.conversation = Conversation(graph, app.state.db, saver, logger)
             yield
 
     app = FastAPI(title="云杉生活 · 售后演示", lifespan=lifespan)

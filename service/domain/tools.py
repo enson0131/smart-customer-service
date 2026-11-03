@@ -1,4 +1,4 @@
-"""DeepSeek 可选择的客服工具。参数经校验后由 LangGraph 节点执行。"""
+"""客服工具的参数定义，供 LangChain Agent 绑定和校验。"""
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -23,10 +23,6 @@ class check_fulfillment(orders):
 
 class check_delivery_receipt(orders):
     """核对模拟签收回执，确认记录中是否有签收日期和交付位置。"""
-
-
-class finish(ToolInput):
-    """所有诉求都已得到工具证据，结束本任务。"""
 
 
 class preview(orders):
@@ -60,6 +56,7 @@ class clarify(ToolInput):
     """需求不明确时向用户提出一个简短的澄清问题。"""
 
     question: str = Field(min_length=1, max_length=240)
+    choose_order: bool = Field(default=False, description="需要用户从订单列表中选择时为 true")
 
 
-TOOLS = {tool.__name__: tool for tool in (orders, preview, policy, shipping_cost, progress, cancel, clarify, track_shipment, check_fulfillment, check_delivery_receipt, finish)}
+TOOLS = {tool.__name__: tool for tool in (orders, preview, policy, shipping_cost, progress, cancel, clarify, track_shipment, check_fulfillment, check_delivery_receipt)}

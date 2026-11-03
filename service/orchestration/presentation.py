@@ -44,17 +44,17 @@ def template(outcome: Outcome):
             return f"演示知识库缺少关于「{facts['query']}」的依据，请向人工客服核实。"
         case "unavailable":
             return "订单里没有记录具体运费，目前查不到金额。"
+        case "user_input":
+            return facts["message"]
         case "clarify":
             return facts["question"]
     raise ValueError(f"未知的业务结果：{outcome.status}")
 
 
-def present(question, plan, outcomes, assistant):
+def present(plan, outcomes):
     response = {"text": "\n".join(template(item) for item in outcomes), "sources": []}
     orders = {}
-    findings = []
     for step, item in zip(plan, outcomes):
-        findings.append({"tool": step["name"], "status": item.status, "facts": item.facts})
         for order in item.artifacts.get("orders", []):
             orders[order["id"]] = order
         if "card" in item.artifacts:
@@ -71,20 +71,4 @@ def present(question, plan, outcomes, assistant):
     if orders:
         response["orders"] = list(orders.values())
 
-    # 交易状态、确认提示和澄清问题使用确定性文案，避免改写其含义。
-    if assistant and all(step["tool"] in {"orders", "policy", "shipping_cost", "track_shipment", "check_fulfillment", "check_delivery_receipt"} for step in findings):
-        try:
-            if len(findings) > 1:
-                answer = assistant.compose_reply(question, findings)
-            elif outcomes[0].status == "policy_found":
-                facts = outcomes[0].facts
-                answer = assistant.answer_policy(facts["query"], facts["sources"])
-            else:
-                return response
-            if isinstance(answer, str) and answer.strip():
-                response["text"] = answer.strip()
-                if "mode" in response:
-                    response["mode"] = "DeepSeek"
-        except Exception:
-            pass  # 原文、卡片和按事实生成的模板仍可直接展示。
     return response

@@ -15,25 +15,35 @@ config:
 ---
 graph TD;
 	__start__([收到消息]):::first
-	enter(识别入口 · enter)
-	reason(模型决策 · reason)
-	act(执行工具 · act)
-	summarize(汇总回复 · summarize)
-	remember(记录对话 · remember)
+	intent(意图识别)
+	direct(执行确定指令)
+	respond(组装客服答复)
+	remember(保存对话)
 	__end__([本轮结束]):::last
-	__start__ --> enter;
-	act -. 返回工具观察 .-> reason;
-	act -.-> summarize;
-	enter -. 精确规则 .-> act;
-	enter -. 自由输入 .-> reason;
-	enter -.-> summarize;
-	reason -. 选择下一步 .-> act;
-	reason -. 完成或停止 .-> summarize;
-	summarize --> remember;
+	__start__ --> intent;
+	agent\3a__end__ --> respond;
+	direct --> remember;
+	intent -.-> agent\3a__start__;
+	intent -.-> direct;
+	respond --> remember;
 	remember --> __end__;
-	act -. 选单后执行工具 .-> act;
+	subgraph agent
+	agent\3a__start__(<p>__start__</p>)
+	agent\3amodel(模型决策)
+	agent\3atools(执行工具 / 等待补充)
+	agent\3aModelCallLimitMiddleware\2ebefore_model(ModelCallLimitMiddleware.before_model)
+	agent\3aModelCallLimitMiddleware\2eafter_model(ModelCallLimitMiddleware.after_model)
+	agent\3a__end__(<p>__end__</p>)
+	agent\3aModelCallLimitMiddleware\2eafter_model -.-> agent\3aModelCallLimitMiddleware\2ebefore_model;
+	agent\3aModelCallLimitMiddleware\2eafter_model -.-> agent\3a__end__;
+	agent\3aModelCallLimitMiddleware\2eafter_model -.-> agent\3atools;
+	agent\3aModelCallLimitMiddleware\2ebefore_model -.-> agent\3a__end__;
+	agent\3aModelCallLimitMiddleware\2ebefore_model -.-> agent\3amodel;
+	agent\3a__start__ --> agent\3aModelCallLimitMiddleware\2ebefore_model;
+	agent\3amodel --> agent\3aModelCallLimitMiddleware\2eafter_model;
+	agent\3atools -.-> agent\3aModelCallLimitMiddleware\2ebefore_model;
+	agent\3atools -.-> agent\3a__end__;
+	end
 	classDef default fill:#F2F8F6,stroke:#82A99C,color:#204A40
 	classDef first fill:#EDF2F5,stroke:#ADBCC5,color:#344957
 	classDef last fill:#EDF2F5,stroke:#ADBCC5,color:#344957
-	classDef react fill:#E9F0FF,stroke:#517BC6,stroke-width:2px,color:#193E78
-	class reason,act react
