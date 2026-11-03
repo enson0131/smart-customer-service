@@ -16,3 +16,18 @@ CREATE TABLE IF NOT EXISTS chat_turns (
     message TEXT NOT NULL, answer TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS chat_turns_visitor ON chat_turns(visitor,id);
+CREATE TABLE IF NOT EXISTS pending_tasks (
+    visitor TEXT PRIMARY KEY REFERENCES visitors(id), snapshot TEXT NOT NULL
+);
+
+-- LangGraph checkpointer: completed conversations remain in chat_turns.
+CREATE TABLE IF NOT EXISTS graph_checkpoints (
+    thread TEXT NOT NULL, ns TEXT NOT NULL, id TEXT NOT NULL,
+    parent TEXT, payload TEXT NOT NULL, metadata TEXT NOT NULL,
+    PRIMARY KEY (thread, ns, id)
+);
+CREATE TABLE IF NOT EXISTS graph_writes (
+    thread TEXT NOT NULL, ns TEXT NOT NULL, id TEXT NOT NULL,
+    task TEXT NOT NULL, idx INTEGER NOT NULL, channel TEXT NOT NULL, payload TEXT NOT NULL,
+    PRIMARY KEY (thread, ns, id, task, idx)
+);

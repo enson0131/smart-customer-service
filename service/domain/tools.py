@@ -13,6 +13,22 @@ class orders(ToolInput):
     order_id: str = Field(default="", pattern=r"^(?:O-[0-9a-f]{16})?$")
 
 
+class track_shipment(orders):
+    """查询模拟包裹物流轨迹，返回运输中或已签收的记录。"""
+
+
+class check_fulfillment(orders):
+    """查询模拟仓库履约信息，判断是否已经交运。"""
+
+
+class check_delivery_receipt(orders):
+    """核对模拟签收回执，确认记录中是否有签收日期和交付位置。"""
+
+
+class finish(ToolInput):
+    """所有诉求都已得到工具证据，结束本任务。"""
+
+
 class preview(orders):
     """核验退货资格并展示退款确认卡。如果订单有歧义，省略订单号并要求选择。"""
 
@@ -26,8 +42,14 @@ class policy(ToolInput):
     query: str = Field(min_length=1, max_length=1200)
 
 
+class shipping_cost(ToolInput):
+    """查询订单实付运费金额；当前演示订单缺少此字段。"""
+
+
 class progress(ToolInput):
     """查询当前访客的退款申请进度。"""
+
+    reference: str = Field(default="", pattern=r"^(?:R-[a-f0-9]{16})?$")
 
 
 class cancel(ToolInput):
@@ -40,4 +62,4 @@ class clarify(ToolInput):
     question: str = Field(min_length=1, max_length=240)
 
 
-TOOLS = {tool.__name__: tool for tool in (orders, preview, policy, progress, cancel, clarify)}
+TOOLS = {tool.__name__: tool for tool in (orders, preview, policy, shipping_cost, progress, cancel, clarify, track_shipment, check_fulfillment, check_delivery_receipt, finish)}

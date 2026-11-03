@@ -3,16 +3,28 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, Request, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, StringConstraints
-from typing import Annotated
+from typing import Annotated, Literal
 
 from constants import MAX_MESSAGE_LENGTH, PROJECT_ROOT, VISITOR_COOKIE, VISITOR_COOKIE_MAX_AGE
 
 from .domain.knowledge import Knowledge
+from .storage.checkpoints import open_checkpointer
+from .orchestration.conversation import Conversation
 from .orchestration.flow import build_flow
 from .model.deepseek import configured_model
 from .storage.store import Store
 
+class SelectOrder(BaseModel):
+    kind: Literal["select_order"]
+    order_id: str = Field(pattern=r"^O-[0-9a-f]{16}$")
+
+
+class CancelPending(BaseModel):
+    kind: Literal["cancel_pending"]
+
+
 class Chat(BaseModel):
+    action: SelectOrder | CancelPending | None = None
     message: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_MESSAGE_LENGTH)]
 
 
@@ -25,8 +37,10 @@ def create_app(store=None, model_factory=configured_model):
     async def lifespan(app):
         model = model_factory()
         app.state.db = store or Store()
-        app.state.flow = build_flow(app.state.db, Knowledge(PROJECT_ROOT / "knowledge"), model)
-        yield
+        with open_checkpointer(app.state.db) as saver:
+            graph = build_flow(app.state.db, Knowledge(PROJECT_ROOT / "knowledge"), model, saver)
+            app.state.conversation = Conversation(graph, app.state.db, saver)
+            yield
 
     app = FastAPI(title="云杉生活 · 售后演示", lifespan=lifespan)
 
@@ -50,7 +64,8 @@ def create_app(store=None, model_factory=configured_model):
 
     @app.post("/api/chat")
     def chat(body: Chat, visitor=Depends(session)):
-        return app.state.flow.invoke({"message": body.message, "session": visitor})["result"]
+        action = body.action.model_dump() if body.action else None
+        return app.state.conversation.respond(visitor, body.message, action)
 
     @app.post("/api/refunds/confirm")
     def confirm(body: Confirm, visitor=Depends(session)):

@@ -1,49 +1,21 @@
-import re
-
 from ..domain.tools import TOOLS
 
 
-def explicit_action(message):
-    return message == "取消" or re.fullmatch(r"O-[0-9a-f]{16}", message) is not None
-
-
-def fallback(s):
-    msg, session = s["message"], s["session"]
-    order = re.search(r"O-[a-f0-9]{16}(?![a-f0-9])", msg, re.I)
-    order_id = "O-" + order[0][2:].lower() if order else ""
-    reason = session["reason"] if session["topic"] == "choose_refund" else None
-    if any(w in msg for w in ("质量问题", "不喜欢", "不合适", "个人原因")):
-        reason = msg[:240]
-    if msg in ("取消", "取消申请", "放弃"):
-        action = "cancel"
-    elif re.search(r"进度|我的申请|申请编号|R-[a-f0-9]{16}", msg, re.I):
-        action = "progress"
-    elif re.search(r"运费|期限|政策|流程|多少天|几天|怎么退", msg):
-        action = "policy"
-    elif re.search(r"能退|可以退|想退|要退|申请退款|办理退款|退掉|整单退", msg):
-        action = "preview"
-    elif order_id:
-        action = "preview" if session["topic"] == "choose_refund" else "orders"
-    elif re.search(r"订单|查单", msg):
-        action = "orders"
-    else:
-        action = "policy"
-    return {"route": action, "order_id": order_id, "reason": reason or "客户申请整单退款"}
-
-
-def recognize(model, session, message, history):
-    context = {"话题": session["topic"], "选中订单": session["selected"],
-               "待确认原因": session["reason"], "最近对话": history, "用户消息": message}
+def next_action(model, session, goal, history, observations, supplement):
+    """只决定眼前的一步，执行后的事实将在下次决策时传回。"""
     calls = model.select_tool(
-        "你是售后助手。根据用户当下的意图和对话记录，调用一个客服工具。"
-        "只使用记录中出现或用户提供的订单号，有歧义先澄清。咨询政策选 policy，"
-        "询问某单能否退或要求退货选 preview。退款只能由用户点击确认卡提交。", context)
-    if len(calls) != 1 or calls[0]["name"] not in TOOLS:
-        return {"route": "clarify", "question": "你想了解售后政策、查看订单，还是办理退款？"}
+        "你是只处理演示售后的 ReAct 客服。每次调用一个工具，根据实际观察再决定下一步。"
+        "逐项检查原请求，所有诉求有结果才调用 finish。不要重复已完成步骤。若同时查物流和能否退，必须分别取得轨迹和该订单的退款资格，政策原文不能代替资格检查。"
+        "物流用 track_shipment；排查未送达时按观察决定是否查仓库 check_fulfillment 、包裹轨迹或签收回执 check_delivery_receipt。"
+        "需查哪单不明确时省略订单号，后端会请用户选择，禁止自行猜测。"
+        "仅使用当前用户明确给定、选中或从候选列表明确指代的订单号。"
+        "金额查询用 shipping_cost，政策用 policy，能否退用 preview；只预览不能提交。"
+        "cancel 只关闭待确认操作，不能取消订单。缺少其他必要信息时用 clarify。"
+        "用户补充可能回答先前问题，也可能改变目标，优先遵循最新明确请求。",
+        {"用户消息": goal, "用户补充": supplement, "选中订单": session["selected"],
+         "话题": session["topic"], "最近对话": history, "工具观察": observations})
+    if len(calls) != 1:
+        raise ValueError("每轮决策只能选择一个动作")
     call = calls[0]
-    try:
-        args = TOOLS[call["name"]].model_validate(call["args"]).model_dump()
-    except ValueError:
-        return {"route": "clarify", "question": "请补充要查询的订单或具体问题。"}
-    return {"route": call["name"], "order_id": args.get("order_id", ""),
-            **args, "reason": args.get("reason") or session["reason"] or "客户申请整单退款"}
+    args = TOOLS[call["name"]].model_validate(call["args"]).model_dump()
+    return {"name": call["name"], "args": args}

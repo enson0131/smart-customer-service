@@ -1,3 +1,4 @@
+import json
 import os
 import secrets
 import sqlite3
@@ -62,6 +63,13 @@ class Store:
     def orders(self, visitor):
         return self.sql("SELECT id,product,cents,delivered FROM orders WHERE visitor=? ORDER BY rowid", visitor)
 
+    def pending_task(self, visitor):
+        rows = self.sql("SELECT snapshot FROM pending_tasks WHERE visitor=?", visitor)
+        return json.loads(rows[0]["snapshot"]) if rows else None
+
+    def clear_task(self, visitor):
+        return bool(self.sql("DELETE FROM pending_tasks WHERE visitor=? RETURNING visitor", visitor))
+
     def recent_turns(self, visitor):
         rows = self.sql("SELECT message,answer FROM chat_turns WHERE visitor=? ORDER BY id DESC LIMIT 6", visitor)
         return rows[::-1]
@@ -72,6 +80,13 @@ class Store:
     def context(self, visitor, topic, selected=None, ticket=None, reason=None):
         self.sql("UPDATE visitors SET topic=?,selected=?,ticket=?,reason=? WHERE id=?",
                  topic, selected, ticket, reason, visitor)
+
+    def cancel_pending(self, visitor):
+        rows = self.sql("""UPDATE visitors SET topic='orders',ticket=NULL,reason=NULL
+            WHERE id=? AND (topic='choose_refund' OR (topic='preview' AND ticket IS NOT NULL
+            AND NOT EXISTS (SELECT 1 FROM refunds WHERE refunds.ticket=visitors.ticket)))
+            RETURNING id""", visitor)
+        return bool(rows)
 
     def confirm(self, visitor, ticket):
         # Validate the live preview, ownership and return window in the write itself.

@@ -19,7 +19,7 @@ function action(parent, text, run) {
   const button = node(parent, 'button', text);
   button.onclick = run;
 }
-async function send(message, ticket) {
+async function send(message, ticket, buttonAction) {
   if (busy || !message.trim()) return;
   busy = true;
   document.querySelector('main').classList.add('chatting');
@@ -32,7 +32,7 @@ async function send(message, ticket) {
   try {
     const response = await fetch(ticket ? '/api/refunds/confirm' : '/api/chat', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify(ticket ? {ticket} : {message})
+      body:JSON.stringify(ticket ? {ticket} : {message, action:buttonAction})
     });
     const data = await response.json();
     if (!response.ok) throw Error(typeof data.detail === 'string' ? data.detail : '请求失败，请重试。');
@@ -46,13 +46,13 @@ async function send(message, ticket) {
     }
     for (const o of data.orders || []) {
       action(el, [o.product, money(o.cents), o.delivered ? '签收于 ' + o.delivered : '运输中', o.id].join(' · '),
-        () => send(o.id));
+        () => send(o.id, null, {kind:"select_order", order_id:o.id}));
     }
     if (data.card) {
       const c = data.card;
       node(el, 'p', [c.order_id, '整单退款 ' + money(c.cents), '原因：' + c.reason].join('\n'));
       action(el, '确认提交', () => send('确认提交', c.ticket));
-      action(el, '取消', () => send('取消'));
+      action(el, '取消', () => send('取消', null, {kind:'cancel_pending'}));
     }
   } catch (err) { bubble(err.message); }
   finally {

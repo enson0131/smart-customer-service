@@ -22,7 +22,7 @@ DEEPSEEK_API_KEY=
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```
 
-模型名统一由 `constants/__init__.py` 中的 `DEEPSEEK_MODEL` 指定。自由输入由 DeepSeek 根据最近六轮对话、当前话题和选中订单选择工具，LangGraph 执行查询、政策检索、退款预览或澄清。订单归属与退款资格由后端核验，提交退款需点击确认卡。模型超时或报错时回到检索模式。SQLite 在首次启动时初始化到 `data/support.sqlite`。运行 `uv run python -m unittest discover -s tests -v` 检查业务流程。
+模型名由 `constants/__init__.py` 中的 `DEEPSEEK_MODEL` 指定。首次启动会初始化本地 SQLite。运行 `uv run python -m unittest discover -s tests -v` 可验证工具执行、跨轮续办和退款确认。
 
 ## 分层架构
 
@@ -30,13 +30,36 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com
 
 | 职责 | 代码入口 | 负责的决定 |
 | --- | --- | --- |
-| 意图识别 | `service/intent/` | 用最近对话解析用户指代，校验模型选出的工具及参数，必要时澄清。 |
-| 模型编排 | `service/orchestration/` | LangGraph 调用意图识别，执行对应节点，管理待确认操作、对话记录和模型异常降级。 |
+| 意图识别 | `service/intent/` | 精确匹配完整指令；其他请求连同工具观察交给模型，每次校验一个动作。 |
+| 模型编排 | `service/orchestration/` | LangGraph 调用意图识别，驱动 ReAct 循环，管理待选订单、任务恢复与回复汇总。 |
 | 模型接入 | `service/model/` | 通过 LangChain 初始化 DeepSeek、绑定工具、发起工具选择和基于资料的回答生成。 |
-| 领域能力 | `service/domain/` | 定义工具参数、检索政策、核验退货资格、生成退款预览和查询申请进度。 |
-| 存储 | `service/storage/` | 通过 SQLite 或 Cloudflare D1 保存访客会话、对话记录、订单和退款申请。 |
+| 领域能力 | `service/domain/` | 定义工具，查询模拟履约、物流轨迹与签收回执，检索政策并核验退款资格。 |
+| 存储 | `service/storage/` | 通过 SQLite 或 Cloudflare D1 保存访客会话、对话记录、订单、退款申请和待续办任务。 |
 
-例如「第二件能退吗」只调用一次模型来确定工具和订单。编排层随后调用退款预览能力，用户确认后由独立 HTTP 接口提交。最终的资格复核和防重复写入在 `service/storage/store.py` 的同一条数据库写入语句中完成。
+### LangGraph 执行流程
+
+![精确规则与可恢复的 ReAct 循环](docs/chat-flow.svg)
+
+流程图由编译后的 LangGraph 直接导出，虚线表示条件边。修改节点或边后，在项目根目录重新生成 [Mermaid 源文件](docs/chat-flow.mmd)：
+
+```sh
+uv run python -m scripts.export_flow
+mmdc -i docs/chat-flow.mmd -o docs/chat-flow.svg
+```
+
+第二条命令使用 Mermaid CLI 渲染 SVG。导出图结构无需启动服务或调用 DeepSeek。
+
+1. `enter` 校验按钮或整句精确指令。例如“查看我的订单”直接进入 `act`，跳过模型决策。
+2. 自由输入进入 `reason`。DeepSeek 根据原始请求、最近六轮对话、选中订单和已完成工具的观察，选择一个动作。每次 `act` 执行后带着新的事实回到 `reason`，所有诉求处理完毕后选择 `finish`。每个任务最多执行 8 次正常工具动作，重复动作、无效输出或模型异常会停止并提示未能继续核实。
+3. 选单、澄清或需要用户重试时，`act` 调用 LangGraph 原生 `interrupt()` 返回提示。服务按访客身份设置 `thread_id`，下一条输入通过 `Command(resume=...)` 恢复同一执行。LangGraph 从被中断的节点开头重放，等待输入前的路径只读取业务数据。刷新后可用“查看我的订单”重新显示候选项；选单先校验候选范围和订单归属。
+   本地使用官方 `SqliteSaver`，Cloudflare D1 使用同一 checkpointer 协议的 SQL 适配器。服务重启后仍可恢复；一轮完成后清理图检查点，对话摘要继续保存在 `chat_turns`。
+4. `summarize` 根据已核实事实生成正文与页面卡片，`remember` 记录本轮对话。模型仅能预览退款；提交仍由独立确认接口执行。
+
+| 在网页输入 | 可以观察到的行为 |
+|---|---|
+| 查一下这单的物流 | 选单后返回该单的模拟轨迹。 |
+| 帮我查物流，再看看能不能退 | 指代不明时先选单，随后在同一次续办中展示物流及退款资格，符合条件时展示确认卡。 |
+| 我的包裹为什么还没到 | 模型可先查轨迹，再根据观察查询仓库交运记录或签收回执。当前数据均为演示记录。 |
 
 ## HTTP 接口
 
@@ -59,7 +82,7 @@ DEEPSEEK_BASE_URL=https://api.deepseek.com
 ```sh
 wrangler login
 wrangler d1 create spruce-aftercare-db
-# 已部署的 D1 也需执行此幂等脚本以新增对话记录表
+# 已部署的 D1 也需执行此幂等脚本，创建 graph_checkpoints 和 graph_writes 等表
 wrangler d1 execute spruce-aftercare-db --remote --file service/storage/schema.sql
 ```
 

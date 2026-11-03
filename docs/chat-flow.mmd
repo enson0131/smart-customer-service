@@ -1,0 +1,39 @@
+---
+config:
+  flowchart:
+    curve: basis
+    diagramPadding: 24
+    htmlLabels: false
+    nodeSpacing: 35
+    rankSpacing: 46
+  theme: base
+  themeVariables:
+    edgeLabelBackground: '#FFFFFF'
+    fontFamily: system-ui, sans-serif
+    fontSize: 16px
+    lineColor: '#69818E'
+---
+graph TD;
+	__start__([收到消息]):::first
+	enter(识别入口 · enter)
+	reason(模型决策 · reason)
+	act(执行工具 · act)
+	summarize(汇总回复 · summarize)
+	remember(记录对话 · remember)
+	__end__([本轮结束]):::last
+	__start__ --> enter;
+	act -. 返回工具观察 .-> reason;
+	act -.-> summarize;
+	enter -. 精确规则 .-> act;
+	enter -. 自由输入 .-> reason;
+	enter -.-> summarize;
+	reason -. 选择下一步 .-> act;
+	reason -. 完成或停止 .-> summarize;
+	summarize --> remember;
+	remember --> __end__;
+	act -. 选单后执行工具 .-> act;
+	classDef default fill:#F2F8F6,stroke:#82A99C,color:#204A40
+	classDef first fill:#EDF2F5,stroke:#ADBCC5,color:#344957
+	classDef last fill:#EDF2F5,stroke:#ADBCC5,color:#344957
+	classDef react fill:#E9F0FF,stroke:#517BC6,stroke-width:2px,color:#193E78
+	class reason,act react

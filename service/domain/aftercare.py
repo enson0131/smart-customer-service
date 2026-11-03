@@ -4,23 +4,25 @@ from datetime import UTC, date, datetime
 
 from constants import REFUND_STATUS, RETURN_WINDOW_DAYS
 from ..storage.store import ident
+from .outcomes import Outcome
 
 
 def preview_refund(store, visitor, order_id, reason):
     rows = store.orders(visitor)
     order = next((row for row in rows if row["id"] == order_id), None)
     if not order:
-        return {"text": "未找到这笔订单。"}
+        return Outcome("order_missing")
     existing = store.sql("SELECT id FROM refunds WHERE visitor=? AND order_id=?", visitor, order_id)
     if existing:
-        return {"text": f"该订单已提交申请 {existing[0]['id']}，状态为{REFUND_STATUS}。"}
+        return Outcome("already_submitted", {"reference": existing[0]["id"], "status": REFUND_STATUS})
     if not order["delivered"]:
-        return {"text": "这笔订单尚未签收。", "ineligible": True}
+        return Outcome("not_delivered")
     days = (datetime.now(UTC).date() - date.fromisoformat(order["delivered"])).days
     if not 0 <= days <= RETURN_WINDOW_DAYS:
-        return {"text": f"这笔订单已超过 {RETURN_WINDOW_DAYS} 天退货期限。", "ineligible": True}
-    return {"text": "订单符合退款条件。请核对后点击确认提交。", "card": {
-        "ticket": ident("P-"), "order_id": order_id, "cents": order["cents"], "reason": reason}}
+        return Outcome("outside_window", {"days": RETURN_WINDOW_DAYS})
+    facts = {"order_id": order_id, "cents": order["cents"], "reason": reason}
+    return Outcome("needs_confirmation", facts, {"card": {**facts, "ticket": ident("P-")}})
+
 
 
 def refund_progress(store, visitor, reference):
@@ -28,4 +30,8 @@ def refund_progress(store, visitor, reference):
         rows = [store.refund(visitor, reference)]
     else:
         rows = store.sql("SELECT id,order_id FROM refunds WHERE visitor=? ORDER BY rowid DESC", visitor)
-    return "\n".join(f"{row['order_id']} · {row['id']} · {REFUND_STATUS}" for row in rows) or "你还没有提交退款申请。"
+    return Outcome("refund_progress", {"refunds": [{**row, "status": REFUND_STATUS} for row in rows]})
+
+
+def shipping_cost():
+    return Outcome("unavailable", {"reason": "order_has_no_shipping_fee_field"})

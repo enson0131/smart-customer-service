@@ -34,3 +34,13 @@ class SupportModel:
             ("human", json.dumps({"问题": question, "资料": sources}, ensure_ascii=False)),
         ])
         return response.content
+
+    def compose_reply(self, question, findings):
+        response = self.chat.invoke([
+            ("system", "你是售后客服。根据客户原问题和已核实的结果，用自然简短的中文直接回答。"
+             "覆盖各项诉求，不复述工具步骤，不推荐无关操作。没有记录的费用不能推断为零。"
+             "保留资料不足、待选择或需点击确认的条件，不得编造金额、原因或办理状态。"
+             "订单、引用与确认卡由页面展示，无需抄录整张卡片。"),
+            ("human", json.dumps({"客户问题": question, "已核实结果": findings}, ensure_ascii=False)),
+        ])
+        return response.content
