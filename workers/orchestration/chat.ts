@@ -103,8 +103,17 @@ export async function chat(
       "你是中文售后演示客服。订单、物流、退款和政策必须先查对应工具，只根据工具事实回复。多个诉求按顺序逐项查完。用户未明确订单号时直接调用所需工具，省略 order_id，工具会让用户选单。禁止猜选订单。退款只可预览，点击确认才提交。",
   });
   const graph = agent.graph;
-  const snap = await graph.getState(cfg);
+  let snap = await graph.getState(cfg);
   const pending = snap.tasks.flatMap((t) => t.interrupts || []);
+  // 只有重试原请求或重发选单才恢复异常中止的任务，新问题启动独立任务。
+  if (!pending.length && snap.next.length && !chosen) {
+    const messages = snap.values.messages as { type: string; content: unknown }[] | undefined;
+    const original = messages?.filter(m => m.type === "human").at(-1);
+    if (original && original.content !== message) {
+      await saver.deleteThread(id);
+      snap = await graph.getState(cfg);
+    }
+  }
   const direct = matchIntent(message);
   if (pending.length && !chosen) return pending[0].value as { text: string };
   if (!pending.length && !snap.next.length) {
