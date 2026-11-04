@@ -1,7 +1,7 @@
 # 本地模型配置（包含 API Key）
 /.env
 
-# 历史本地环境（不再使用）
+# 本地 Python 环境
 /.python/
 /.venv/
 
@@ -10,4 +10,3 @@ __pycache__/
 node_modules/
 .wrangler/
 .dev.vars
-/workers/domain/index.generated.json

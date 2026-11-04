@@ -1,13 +1,49 @@
-%%{init: {'flowchart': {'curve': 'linear'}}}%%
+---
+config:
+  flowchart:
+    curve: basis
+    diagramPadding: 24
+    htmlLabels: false
+    nodeSpacing: 35
+    rankSpacing: 46
+  theme: base
+  themeVariables:
+    edgeLabelBackground: '#FFFFFF'
+    fontFamily: system-ui, sans-serif
+    fontSize: 16px
+    lineColor: '#69818E'
+---
 graph TD;
-	__start__([<p>__start__</p>]):::first
-	model_request(model_request)
-	tools(tools<hr/><small><em>__tools = track_shipment,check_fulfillment,check_delivery_receipt,shipping_cost,list_orders,preview_refund,search_policy,refund_progress,cancel_pending</em></small>)
-	__end__([<p>__end__</p>]):::last
-	__start__ --> model_request;
-	tools --> model_request;
-	model_request -.-> tools;
-	model_request -.-> __end__;
-	classDef default fill:#f2f0ff,line-height:1.2;
-	classDef first fill-opacity:0;
-	classDef last fill:#bfb6fc;
+	__start__([收到消息]):::first
+	intent(意图识别)
+	direct(执行确定指令)
+	respond(组装客服答复)
+	remember(保存对话)
+	__end__([本轮结束]):::last
+	__start__ --> intent;
+	agent\3a__end__ --> respond;
+	direct --> remember;
+	intent -.-> agent\3a__start__;
+	intent -.-> direct;
+	respond --> remember;
+	remember --> __end__;
+	subgraph agent
+	agent\3a__start__(<p>__start__</p>)
+	agent\3amodel(模型决策)
+	agent\3atools(执行工具 / 等待补充)
+	agent\3aModelCallLimitMiddleware\2ebefore_model(ModelCallLimitMiddleware.before_model)
+	agent\3aModelCallLimitMiddleware\2eafter_model(ModelCallLimitMiddleware.after_model)
+	agent\3a__end__(<p>__end__</p>)
+	agent\3aModelCallLimitMiddleware\2eafter_model -.-> agent\3aModelCallLimitMiddleware\2ebefore_model;
+	agent\3aModelCallLimitMiddleware\2eafter_model -.-> agent\3a__end__;
+	agent\3aModelCallLimitMiddleware\2eafter_model -.-> agent\3atools;
+	agent\3aModelCallLimitMiddleware\2ebefore_model -.-> agent\3a__end__;
+	agent\3aModelCallLimitMiddleware\2ebefore_model -.-> agent\3amodel;
+	agent\3a__start__ --> agent\3aModelCallLimitMiddleware\2ebefore_model;
+	agent\3amodel --> agent\3aModelCallLimitMiddleware\2eafter_model;
+	agent\3atools -.-> agent\3aModelCallLimitMiddleware\2ebefore_model;
+	agent\3atools -.-> agent\3a__end__;
+	end
+	classDef default fill:#F2F8F6,stroke:#82A99C,color:#204A40
+	classDef first fill:#EDF2F5,stroke:#ADBCC5,color:#344957
+	classDef last fill:#EDF2F5,stroke:#ADBCC5,color:#344957
