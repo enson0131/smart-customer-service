@@ -2,6 +2,8 @@
 
 基于 FastAPI、LangGraph、LangChain 和 DeepSeek 的中文售后演示。每位访客有三笔虚构订单，分别覆盖可退款、超过期限和尚未签收。退款只登记为「已受理（模拟）」。
 
+![智能售后客服界面，包含新建对话、快捷服务和历史会话列表](docs/customer-service-preview.png)
+
 ## 本地体验
 
 需要 Python 3.12、uv 和非空的 DEEPSEEK_API_KEY。启动时从环境变量或项目根目录的 .env 读取密钥。在项目根目录运行：
