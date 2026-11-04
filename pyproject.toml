@@ -1,7 +1,7 @@
 [project]
 name = "smart-customer-service"
 version = "0.1.0"
-description = "基于 LangGraph 实现的 AI 智能客服系统"
+description = "基于 LangGraph 实现的 AI 智能售后客服系统"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

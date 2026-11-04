@@ -31,18 +31,23 @@ graph TD;
 	agent\3a__start__(<p>__start__</p>)
 	agent\3amodel(模型决策)
 	agent\3atools(执行工具 / 等待补充)
-	agent\3aModelCallLimitMiddleware\2ebefore_model(ModelCallLimitMiddleware.before_model)
-	agent\3aModelCallLimitMiddleware\2eafter_model(ModelCallLimitMiddleware.after_model)
+	agent\3acontinue_tool_batch\2ebefore_model(before_model：续派剩余工具)
+	agent\3aModelCallLimitMiddleware\2ebefore_model(检查模型调用次数)
+	agent\3aModelCallLimitMiddleware\2eafter_model(记录模型调用次数)
+	agent\3aprepare_tool_batch\2eafter_model(after_model：保存新批次)
 	agent\3a__end__(<p>__end__</p>)
-	agent\3aModelCallLimitMiddleware\2eafter_model -.-> agent\3aModelCallLimitMiddleware\2ebefore_model;
 	agent\3aModelCallLimitMiddleware\2eafter_model -.-> agent\3a__end__;
+	agent\3aModelCallLimitMiddleware\2eafter_model -.-> agent\3acontinue_tool_batch\2ebefore_model;
 	agent\3aModelCallLimitMiddleware\2eafter_model -.-> agent\3atools;
 	agent\3aModelCallLimitMiddleware\2ebefore_model -.-> agent\3a__end__;
 	agent\3aModelCallLimitMiddleware\2ebefore_model -.-> agent\3amodel;
-	agent\3a__start__ --> agent\3aModelCallLimitMiddleware\2ebefore_model;
-	agent\3amodel --> agent\3aModelCallLimitMiddleware\2eafter_model;
-	agent\3atools -.-> agent\3aModelCallLimitMiddleware\2ebefore_model;
+	agent\3a__start__ --> agent\3acontinue_tool_batch\2ebefore_model;
+	agent\3acontinue_tool_batch\2ebefore_model -.-> agent\3aModelCallLimitMiddleware\2ebefore_model;
+	agent\3acontinue_tool_batch\2ebefore_model -.-> agent\3atools;
+	agent\3amodel --> agent\3aprepare_tool_batch\2eafter_model;
+	agent\3aprepare_tool_batch\2eafter_model --> agent\3aModelCallLimitMiddleware\2eafter_model;
 	agent\3atools -.-> agent\3a__end__;
+	agent\3atools -.-> agent\3acontinue_tool_batch\2ebefore_model;
 	end
 	classDef default fill:#F2F8F6,stroke:#82A99C,color:#204A40
 	classDef first fill:#EDF2F5,stroke:#ADBCC5,color:#344957

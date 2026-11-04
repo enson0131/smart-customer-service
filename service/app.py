@@ -1,3 +1,4 @@
+import json
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Request, Response
@@ -24,12 +25,17 @@ class CancelPending(BaseModel):
     kind: Literal["cancel_pending"]
 
 
+ChatId = Annotated[str, Field(pattern=r"^C-[0-9a-f]{16}$")]
+
+
 class Chat(BaseModel):
+    chat_id: ChatId
     action: SelectOrder | CancelPending | None = None
     message: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=MAX_MESSAGE_LENGTH)]
 
 
 class Confirm(BaseModel):
+    chat_id: ChatId
     ticket: str = Field(pattern=r"^P-[0-9a-f]{16}$")
 
 
@@ -44,11 +50,11 @@ def create_app(store=None, model_factory=configured_model):
             app.state.conversation = Conversation(graph, app.state.db, saver, logger)
             yield
 
-    app = FastAPI(title="云杉生活 · 售后演示", lifespan=lifespan)
+    app = FastAPI(title="智能售后客服 · 售后演示", lifespan=lifespan)
 
-    def session(request: Request, response: Response):
+    def current_visitor(request: Request, response: Response):
         cookie = request.cookies.get(VISITOR_COOKIE)
-        visitor = app.state.db.session(cookie)
+        visitor = app.state.db.visitor(cookie)
         response.headers["Cache-Control"] = "no-store"
         if visitor["id"] != cookie:
             response.set_cookie(VISITOR_COOKIE, visitor["id"], httponly=True, samesite="strict",
@@ -61,20 +67,39 @@ def create_app(store=None, model_factory=configured_model):
         return {"status": "ok"}
 
     @app.get("/api/orders")
-    def orders(visitor=Depends(session)):
+    def orders(visitor=Depends(current_visitor)):
         return app.state.db.orders(visitor["id"])
 
+    @app.post("/api/chats", status_code=201)
+    def create_chat(visitor=Depends(current_visitor)):
+        chat = app.state.db.create_chat(visitor["id"])
+        return {"id": chat["id"]}
+
+    @app.get("/api/chats")
+    def list_chats(visitor=Depends(current_visitor)):
+        return app.state.db.chats(visitor["id"])
+
+    @app.get("/api/chats/{chat_id}")
+    def read_chat(chat_id: ChatId, visitor=Depends(current_visitor)):
+        app.state.db.chat(visitor["id"], chat_id)
+        turns = app.state.db.messages(chat_id)
+        return {"id": chat_id, "turns": [
+            {"message": turn["message"], "reply": json.loads(turn["answer"])} for turn in turns
+        ]}
+
     @app.post("/api/chat")
-    def chat(body: Chat, visitor=Depends(session)):
+    def chat(body: Chat, visitor=Depends(current_visitor)):
         action = body.action.model_dump() if body.action else None
-        return app.state.conversation.respond(visitor, body.message, action)
+        return app.state.conversation.respond(visitor["id"], body.chat_id, body.message, action)
 
     @app.post("/api/refunds/confirm")
-    def confirm(body: Confirm, visitor=Depends(session)):
-        return app.state.db.confirm(visitor["id"], body.ticket)
+    def confirm(body: Confirm, visitor=Depends(current_visitor)):
+        result = app.state.db.confirm(visitor["id"], body.chat_id, body.ticket)
+        app.state.db.record_turn(body.chat_id, "确认提交", {"text": result["id"] + " · " + result["status"], "sources": []})
+        return result
 
     @app.get("/api/refunds/{ref}")
-    def refund(ref: str, visitor=Depends(session)):
+    def refund(ref: str, visitor=Depends(current_visitor)):
         return app.state.db.refund(visitor["id"], ref)
 
     app.mount("/", StaticFiles(directory=PROJECT_ROOT / "service/static", html=True), name="web")

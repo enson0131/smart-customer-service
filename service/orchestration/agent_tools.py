@@ -20,10 +20,10 @@ class SupportTools:
         self.store = store
         self.knowledge = knowledge
 
-    def execute(self, name, args, visitor):
-        session = self.store.session(visitor)
-        event("tool.request", tool=name, params=args, selected_order=session["selected"])
-        result = self.run(name, args, session)
+    def execute(self, name, args, visitor_id, chat_id):
+        chat = self.store.chat(visitor_id, chat_id)
+        event("tool.request", tool=name, params=args, selected_order=chat["selected"])
+        result = self.run(name, args, chat)
         event("tool.result", tool=name, status=result.status, facts=result.facts, artifacts=result.artifacts)
         return result
 
@@ -34,10 +34,11 @@ class SupportTools:
         return interrupt({"reply": reply, "status": status, "reason": reason,
                           "choices": [o["id"] for o in choices]})
 
-    def run(self, name, args, session):
-        visitor = session["id"]
+    def run(self, name, args, chat):
+        visitor = chat["visitor_id"]
+        chat_id = chat["id"]
         if name == "cancel":
-            closed = self.store.cancel_pending(visitor)
+            closed = self.store.cancel_pending(chat_id)
             return Outcome("cancelled" if closed else "nothing_pending")
         if name == "shipping_cost":
             return shipping_cost()
@@ -52,18 +53,18 @@ class SupportTools:
             response = self.ask(args["question"], choices)
             action = response.get("action") or {}
             if action.get("kind") == "select_order":
-                self.store.context(visitor, "orders", action["order_id"])
+                self.store.context(chat_id, "orders", action["order_id"])
             return Outcome("user_input", {"message": response["message"]})
 
         rows = self.store.orders(visitor)
         selected = None if args.get("choose_order") else args.get("order_id")
         if name == "orders" and not selected:
-            self.store.context(visitor, "orders")
+            self.store.context(chat_id, "orders")
             return Outcome("order_list", {"orders": [{"id": o["id"], "product": o["product"]} for o in rows]},
                            {"orders": rows})
         if not args.get("choose_order"):
-            selected = selected or session["selected"]
-        reason = args.get("reason") or session["reason"] or "客户申请整单退款"
+            selected = selected or chat["selected"]
+        reason = args.get("reason") or chat["reason"] or "客户申请整单退款"
         if not selected and len(rows) == 1:
             selected = rows[0]["id"]
         if not selected and rows:
@@ -71,7 +72,7 @@ class SupportTools:
             response = self.ask(template(Outcome(status)), rows, status, reason)
             action = response.get("action") or {}
             if action.get("kind") == "cancel_pending":
-                self.store.cancel_pending(visitor)
+                self.store.cancel_pending(chat_id)
                 return Outcome("cancelled")
             if action.get("kind") != "select_order":
                 return Outcome("user_input", {"message": response["message"]})
@@ -82,19 +83,20 @@ class SupportTools:
         if name == "preview":
             result = preview_refund(self.store, visitor, selected, reason)
             if result.status == "needs_confirmation":
-                self.store.context(visitor, "preview", selected, result.artifacts["card"]["ticket"], reason)
+                self.store.context(chat_id, "preview", selected, result.artifacts["card"]["ticket"], reason)
             elif result.status in {"outside_window", "not_delivered"}:
-                self.store.context(visitor, "orders", selected)
+                self.store.context(chat_id, "orders", selected)
             return result
-        if name == "orders" or session["selected"] != selected:
-            self.store.context(visitor, "orders", selected)
+        if name == "orders" or chat["selected"] != selected:
+            self.store.context(chat_id, "orders", selected)
         if name == "orders":
             return Outcome("order_found", {"order_id": selected, "product": order["product"]}, {"orders": [order]})
         return delivery_record(order, name)
 
     def as_tool(self, name, schema):
         def call(config: RunnableConfig, **args):
-            outcome = self.execute(name, args, config["configurable"]["thread_id"])
+            settings = config["configurable"]
+            outcome = self.execute(name, args, settings["visitor_id"], settings["thread_id"])
             # content 可见于模型；卡片、票据只经 artifact 返回页面。
             content = {"status": outcome.status, "facts": outcome.facts}
             return json.dumps(content, ensure_ascii=False), asdict(outcome)

@@ -29,7 +29,7 @@ class preview(orders):
     """核验退货资格并展示退款确认卡。如果订单有歧义，省略订单号并要求选择。"""
 
     reason: str = Field(default="", max_length=240)
-    choose_order: bool = Field(default=False, description="存在多个可能订单且无法确定时为 true")
+    choose_order: bool = Field(default=False, description="仅用户明确要求另选一笔订单时为 true；同一批查物流再退款必须为 false，复用前一步选单。未选单时系统自动询问。")
 
 
 class policy(ToolInput):

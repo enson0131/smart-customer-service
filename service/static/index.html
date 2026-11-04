@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="icon" href="data:,"><title>云杉生活 · 售后助手</title>
+  <link rel="icon" href="data:,"><title>智能售后客服</title>
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
@@ -12,30 +12,30 @@
     <symbol id="book" viewBox="0 0 24 24"><path d="M12 6C9 4 5 4 2 5v14c3-1 7-1 10 1 3-2 7-2 10-1V5c-3-1-7-1-10 1zm0 0v14"/></symbol>
     <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/></symbol>
   </svg>
-  <aside>
-    <div class="brand"><svg><use href="#spruce"/></svg>云杉生活</div>
-    <div class="group-label">服务工作台</div>
-    <div class="active">◌　售后对话</div>
+  <aside id="sidebar">
+    <div class="brand"><svg><use href="#spruce"/></svg>智能售后客服</div>
+    <button id="new-chat" type="button">＋ 开启新对话</button>
     <div class="group-label">快捷服务</div>
     <nav aria-label="快捷服务">
       <button data-ask="查看我的订单"><svg><use href="#box"/></svg>我的订单</button>
       <button data-ask="退货运费谁承担"><svg><use href="#book"/></svg>退货政策</button>
       <button data-ask="查询退款进度"><svg><use href="#clock"/></svg>申请进度</button>
     </nav>
+    <div class="history"><div class="group-label">历史会话</div><nav id="chat-list" aria-label="历史会话"></nav></div>
     <div class="visitor"><span>访</span>演示访客</div>
   </aside>
   <main>
-    <header><strong>云杉客服</strong><span>售后演示</span></header>
+    <header><button id="toggle-sidebar" type="button" aria-label="切换会话列表" aria-controls="sidebar" aria-expanded="false">☰</button><strong>智能售后客服</strong><span>售后演示</span></header>
     <div class="workspace">
       <section class="welcome">
         <svg class="hero-mark" aria-hidden="true"><use href="#spruce"/></svg>
-        <h1>你好，我是云杉客服</h1>
+        <h1>你好，我是智能售后客服</h1>
         <p>关于订单、退货和退款，有什么可以帮你？</p>
       </section>
       <section id="log" role="log" aria-label="对话记录" aria-live="polite"></section>
       <div class="composer">
         <form>
-          <textarea id="question" rows="2" aria-label="你的问题" required maxlength="1200" placeholder="给云杉客服发送消息…"></textarea>
+          <textarea id="question" rows="2" aria-label="你的问题" required maxlength="1200" placeholder="给智能售后客服发送消息…"></textarea>
           <div class="tools"><span><i></i>售后助手</span><button type="submit" aria-label="发送" title="发送"><svg viewBox="0 0 24 24"><path d="M12 19V5m-6 6 6-6 6 6"/></svg></button></div>
         </form>
         <nav class="chips" aria-label="建议提问">

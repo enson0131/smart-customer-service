@@ -61,3 +61,17 @@ article button { display:block; margin:7px 0; text-align:left; }
   footer { padding:7px; }
 }
 @media (max-height:500px) { .hero-mark,.welcome p { display:none; } .welcome { margin-bottom:8px; } }
+
+#new-chat { margin-top:28px; color:#3559c7; background:#e9eeff; font-weight:600; }
+#new-chat:hover { background:#dfe7ff; }
+.history { flex:1; min-height:0; display:flex; flex-direction:column; margin-bottom:16px; }
+.history .group-label { margin-top:24px; }
+#chat-list { overflow-y:auto; min-height:0; }
+#chat-list button { display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:4px; font-size:14px; }
+#chat-list button.active { background:#e9eeff; color:#3559c7; }
+#chat-list p { color:#8a8f9c; font-size:13px; padding:0 14px; }
+#toggle-sidebar { display:none; font-size:21px; }
+@media (max-width:720px) {
+  #toggle-sidebar { display:block; }
+  .sidebar-open aside { display:flex; position:fixed; inset:56px 0 0 0; width:min(300px,85vw); z-index:10; box-shadow:12px 0 30px #17275320; }
+}

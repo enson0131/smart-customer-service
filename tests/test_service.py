@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from fake_chat import TestChatModel, goal_and_tools
 
-from fastapi.testclient import TestClient
+from chat_client import ChatTestClient as TestClient
 
 from service.app import create_app
 from service.storage.store import Store
@@ -160,7 +160,7 @@ class SupportTest(unittest.TestCase):
         self.assertEqual(result["card"]["order_id"], row["id"])
         self.assertLess(result["text"].index("查到了"), result["text"].index("符合退款"))
         self.assertLess(result["text"].index("符合退款"), result["text"].index("具体运费"))
-        self.assertEqual(len(self.db.sql("SELECT id FROM chat_turns")), 1)
+        self.assertEqual(len(self.db.sql("SELECT id FROM chat_messages")), 1)
         self.model.plans["错误计划"] = [("unknown", {})]
         self.assertIn("稍后重试", self.chat("错误计划")["text"])
         # 单独输入“取消”没有指定取消对象，交给模型澄清。

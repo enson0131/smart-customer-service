@@ -25,7 +25,7 @@ text{font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;f
 <text class="num" x="48" y="58" text-anchor="middle">02</text>
 <text class="heading" x="98" y="43">模型编排层</text>
 <text class="path" x="796" y="40" text-anchor="end">service/orchestration/</text>
-<text class="detail" x="98" y="76">LangGraph 负责入口分流，create_agent 管理消息和工具循环。</text>
+<text class="detail" x="98" y="76">chat_id 作为线程；原生检查点按聊天隔离，Agent 钩子顺序调度工具。</text>
 </g>
 <path d="M460 372v23" stroke="#6683a8" stroke-width="2" marker-end="url(#down)"/>
 <g transform="translate(50 402)">
@@ -34,7 +34,7 @@ text{font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;f
 <text class="num" x="48" y="58" text-anchor="middle">03</text>
 <text class="heading" x="98" y="43">模型层</text>
 <text class="path" x="796" y="40" text-anchor="end">service/model/</text>
-<text class="detail" x="98" y="76">通过 LangChain 接入 DeepSeek，逐步选择工具，并基于已核实的事实组织回答。</text>
+<text class="detail" x="98" y="76">通过 LangChain 接入 DeepSeek，提出工具调用，收到全部结果后统一回复。</text>
 </g>
 <path d="M460 508v23" stroke="#6683a8" stroke-width="2" marker-end="url(#down)"/>
 <g transform="translate(50 538)">
@@ -43,7 +43,7 @@ text{font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;f
 <text class="num" x="48" y="58" text-anchor="middle">04</text>
 <text class="heading" x="98" y="43">领域能力层</text>
 <text class="path" x="796" y="40" text-anchor="end">service/domain/</text>
-<text class="detail" x="98" y="76">政策检索、模拟履约与物流轨迹、签收回执、退款资格与预览。</text>
+<text class="detail" x="98" y="76">按 visitor_id 校验订单归属；政策检索、物流查询、退款资格与预览。</text>
 </g>
 <path d="M460 644v23" stroke="#6683a8" stroke-width="2" marker-end="url(#down)"/>
 <g transform="translate(50 674)">
@@ -52,7 +52,7 @@ text{font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;f
 <text class="num" x="48" y="58" text-anchor="middle">05</text>
 <text class="heading" x="98" y="43">存储层</text>
 <text class="path" x="796" y="40" text-anchor="end">service/storage/</text>
-<text class="detail" x="98" y="76">SQLite 保存 LangGraph 检查点、工具结果、会话、订单及退款申请。</text>
+<text class="detail" x="98" y="76">访客拥有多段聊天；消息、选单、票据及检查点按 chat_id 分别保存。</text>
 </g>
 <text x="51" y="808" font-size="14" fill="#546d8b">箭头表示层次顺序。单次请求由编排层按需调度模型和领域能力。</text>
 </svg>

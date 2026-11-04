@@ -7,11 +7,11 @@ EXACT_QUERIES = {
 }
 
 
-def match_single_intent(message, session, action=None):
+def match_single_intent(message, chat, action=None):
     if action is not None:
-        # 按钮类型和消息必须一致，避免把附带其他需求的文本截断。
-        if action["kind"] == "select_order" and message == action["order_id"]:
-            name = "preview" if session["topic"] == "choose_refund" else "orders"
+        # 选单以结构化按钮参数为准，message 仅用于展示。
+        if action["kind"] == "select_order":
+            name = "preview" if chat["topic"] == "choose_refund" else "orders"
             return {"name": name, "args": {"order_id": action["order_id"]}}
         if action["kind"] == "cancel_pending" and message == "取消":
             return {"name": "cancel", "args": {}}
