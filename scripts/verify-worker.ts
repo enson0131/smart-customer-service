@@ -1,4 +1,8 @@
 import assert from "node:assert/strict";
+import { EnvHttpProxyAgent, setGlobalDispatcher } from "undici";
+
+// Node 22 的 fetch 默认不读取代理变量；沿用用户的 HTTP(S)_PROXY 与 NO_PROXY。
+setGlobalDispatcher(new EnvHttpProxyAgent());
 
 const origin = process.argv[2] || "http://127.0.0.1:8000";
 let cookie = "";
