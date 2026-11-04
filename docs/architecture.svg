@@ -15,7 +15,7 @@ text{font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;f
 <rect x="22" y="21" width="53" height="61" rx="10" fill="#28568b"/>
 <text class="num" x="48" y="58" text-anchor="middle">01</text>
 <text class="heading" x="98" y="43">意图识别层</text>
-<text class="path" x="796" y="40" text-anchor="end">service/intent/ · workers/intent/</text>
+<text class="path" x="796" y="40" text-anchor="end">workers/intent/</text>
 <text class="detail" x="98" y="76">精确单意图直达；自由输入结合任务上下文和工具观察选择动作。</text>
 </g>
 <path d="M460 236v23" stroke="#6683a8" stroke-width="2" marker-end="url(#down)"/>
@@ -24,8 +24,8 @@ text{font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;f
 <rect x="22" y="21" width="53" height="61" rx="10" fill="#28568b"/>
 <text class="num" x="48" y="58" text-anchor="middle">02</text>
 <text class="heading" x="98" y="43">模型编排层</text>
-<text class="path" x="796" y="40" text-anchor="end">service/orchestration/ · workers/orchestration/</text>
-<text class="detail" x="98" y="76">LangGraph 负责入口分流，create_agent 管理消息和工具循环。</text>
+<text class="path" x="796" y="40" text-anchor="end">workers/orchestration/</text>
+<text class="detail" x="98" y="76">精确指令直达，原生 createAgent 管理消息与工具循环。</text>
 </g>
 <path d="M460 372v23" stroke="#6683a8" stroke-width="2" marker-end="url(#down)"/>
 <g transform="translate(50 402)">
@@ -33,7 +33,7 @@ text{font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;f
 <rect x="22" y="21" width="53" height="61" rx="10" fill="#28568b"/>
 <text class="num" x="48" y="58" text-anchor="middle">03</text>
 <text class="heading" x="98" y="43">模型层</text>
-<text class="path" x="796" y="40" text-anchor="end">service/model/ · workers/model/</text>
+<text class="path" x="796" y="40" text-anchor="end">workers/model/</text>
 <text class="detail" x="98" y="76">通过 LangChain 接入 DeepSeek，逐步选择工具，并基于已核实的事实组织回答。</text>
 </g>
 <path d="M460 508v23" stroke="#6683a8" stroke-width="2" marker-end="url(#down)"/>
@@ -42,7 +42,7 @@ text{font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;f
 <rect x="22" y="21" width="53" height="61" rx="10" fill="#28568b"/>
 <text class="num" x="48" y="58" text-anchor="middle">04</text>
 <text class="heading" x="98" y="43">领域能力层</text>
-<text class="path" x="796" y="40" text-anchor="end">service/domain/ · workers/domain/</text>
+<text class="path" x="796" y="40" text-anchor="end">workers/domain/</text>
 <text class="detail" x="98" y="76">政策检索、模拟履约与物流轨迹、签收回执、退款资格与预览。</text>
 </g>
 <path d="M460 644v23" stroke="#6683a8" stroke-width="2" marker-end="url(#down)"/>
@@ -51,8 +51,8 @@ text{font-family:"PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif;f
 <rect x="22" y="21" width="53" height="61" rx="10" fill="#28568b"/>
 <text class="num" x="48" y="58" text-anchor="middle">05</text>
 <text class="heading" x="98" y="43">存储层</text>
-<text class="path" x="796" y="40" text-anchor="end">service/storage/ · workers/storage/</text>
-<text class="detail" x="98" y="76">SQLite 或 D1 保存 LangGraph 检查点、工具结果、会话、订单及退款申请。</text>
+<text class="path" x="796" y="40" text-anchor="end">workers/storage/</text>
+<text class="detail" x="98" y="76">本地 SQLite、线上 D1 保存检查点、会话、订单及模拟退款。</text>
 </g>
 <text x="51" y="808" font-size="14" fill="#546d8b">箭头表示层次顺序。单次请求由编排层按需调度模型和领域能力。</text>
 </svg>

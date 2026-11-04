@@ -1,4 +1,5 @@
 import { chat, type Action } from "./orchestration/chat";
+import { log, withTask } from "./logging";
 import { Store } from "./storage/store";
 import type { Settings } from "./model/deepseek";
 interface Env extends Settings {
@@ -62,7 +63,18 @@ export default {
           body.message.length <= 1200
         )
           return json(
-            await chat(store, visitor, body.message.trim(), body.action, env),
+            await withTask(visitor.id, async () => {
+              log("chat.request", body);
+              const result = await chat(
+                store,
+                visitor,
+                body.message!.trim(),
+                body.action,
+                env,
+              );
+              log("chat.response", result);
+              return result;
+            }),
           );
         return json({ detail: "无效请求。" }, 400);
       }

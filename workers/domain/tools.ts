@@ -1,4 +1,5 @@
 import { tool } from "langchain";
+import { log } from "../logging";
 import { interrupt } from "@langchain/langgraph";
 import { z } from "zod";
 import { search } from "./knowledge";
@@ -16,7 +17,9 @@ export function aftercareTools(
     let order = orders.find((o) => o.id === (orderId || selected));
     if (orderId && !order) throw Error("未找到这笔订单");
     if (!order) {
+      log("task.wait", { kind: "select_order" });
       const answer = interrupt({ orders, text: "请先选择要查询的订单。" });
+      log("task.resume", answer);
       order = orders.find((o) => o.id === answer.order_id);
       if (!order) throw Error("无效订单");
     }

@@ -1,3 +1,4 @@
+import { tokens } from "./tokens";
 import data from "./index.generated.json";
 type Source = { title: string; excerpt: string };
 const { chunks, df, avg } = data as unknown as {
@@ -6,16 +7,7 @@ const { chunks, df, avg } = data as unknown as {
   avg: number;
 };
 export function search(query: string) {
-  const words = query.toLowerCase().match(/[\u3400-\u9fff]+|[a-z0-9]+/g) ?? [];
-  const terms = new Set(
-    words.flatMap((word) =>
-      /^[a-z0-9]+$/.test(word) || word.length === 1
-        ? [word]
-        : Array.from({ length: word.length - 1 }, (_, i) =>
-            word.slice(i, i + 2),
-          ),
-    ),
-  );
+  const terms = new Set(tokens(query));
   const ranked = chunks
     .map(([source, counts]) => {
       const matches = [...terms].filter((t) => Object.hasOwn(counts, t));

@@ -5,8 +5,8 @@
   "compatibility_date": "2026-11-01",
   "compatibility_flags": ["nodejs_compat"],
   "minify": true,
-  "build": { "command": "python3 -m scripts.worker_knowledge" },
-  "assets": { "directory": "./service/static", "binding": "ASSETS" },
+  "build": { "command": "npm run knowledge" },
+  "assets": { "directory": "./public", "binding": "ASSETS" },
   "d1_databases": [
     {
       "binding": "DB",

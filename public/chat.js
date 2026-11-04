@@ -27,8 +27,8 @@ async function send(message, ticket, buttonAction) {
   input.value = '';
   const waiting = bubble('处理中…');
   log.scrollTop = log.scrollHeight;
-  const previous = [...document.querySelectorAll('article button')];
-  document.querySelectorAll('button').forEach(b => b.disabled = true);
+  const buttons = document.querySelectorAll('button');
+  buttons.forEach(b => b.disabled = true);
   try {
     const response = await fetch(ticket ? '/api/refunds/confirm' : '/api/chat', {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -36,7 +36,7 @@ async function send(message, ticket, buttonAction) {
     });
     const data = await response.json();
     if (!response.ok) throw Error(typeof data.detail === 'string' ? data.detail : '请求失败，请重试。');
-    previous.forEach(b => b.remove());
+    log.querySelectorAll('button').forEach(b => b.remove());
     const el = bubble(ticket ? data.id + ' · ' + data.status : data.text);
     if (data.mode) node(el, 'b', data.mode);
     for (const source of data.sources || []) {
@@ -57,8 +57,7 @@ async function send(message, ticket, buttonAction) {
   } catch (err) { bubble(err.message); }
   finally {
     waiting.remove();
-    previous.forEach(b => b.disabled = false);
-    document.querySelectorAll('nav button, form button').forEach(b => b.disabled = false);
+    buttons.forEach(b => b.disabled = false);
     busy = false;
     log.scrollTop = log.scrollHeight;
   }

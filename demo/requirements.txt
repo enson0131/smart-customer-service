@@ -1,5 +1,0 @@
-langchain
-langchain-deepseek
-langchain-mcp-adapters>=0.3.2
-python-dotenv
-socksio
