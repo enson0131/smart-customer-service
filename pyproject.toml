@@ -19,6 +19,7 @@ dependencies = [
     "langgraph-cli[inmem]>=0.4.21",
     "notebook>=7.5.5",
     "openai>=2.29.0",
+    "pypdf>=7.0.0",
     "python-dotenv>=1.2.2",
     "socksio>=1.0.0",
 ]
