@@ -1,6 +1,8 @@
 langchain
 langchain-community>=0.4.1
 pypdf
+mineru-open-sdk
+langchain-mineru
 langchain-deepseek
 langchain-mcp-adapters>=0.3.2
 python-dotenv

@@ -1816,6 +1816,20 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-mineru"
+version = "0.1.3"
+source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "mineru-open-sdk" },
+    { name = "pypdf" },
+]
+sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/d5/a3/6b9ebb6c4d57a4cc66bd57901dbb45c9f3a122df2056c6119a3902bf056d/langchain_mineru-0.1.3.tar.gz", hash = "sha256:9dfe6a790920b462b65f0d046009f46e2a572569e65b2945f4196ef8180ea6bd", size = 7008, upload-time = "2026-03-20T11:14:12.07Z" }
+wheels = [
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/fc/c1/496e55b801d14966bbf97cd4f950382ff34b5d65f72cd911bcf44562fccf/langchain_mineru-0.1.3-py3-none-any.whl", hash = "sha256:9b3cf6a669d7d3d5093af05ee9d27f9ecb073b3ca76951b25e1ab1f4e2c2c8ba", size = 9179, upload-time = "2026-03-20T11:14:10.62Z" },
+]
+
+[[package]]
 name = "langchain-openai"
 version = "1.7.3"
 source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple" }
@@ -2238,6 +2252,18 @@ source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple" }
 sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/d6/54/cfe61301667036ec958cb99bd3efefba235e65cdeb9c84d24a8293ba1d90/mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba", size = 8729, upload-time = "2022-08-14T12:40:10.846Z" }
 wheels = [
     { url = "https://pypi.tuna.tsinghua.edu.cn/packages/b3/38/89ba8ad64ae25be8de66a6d463314cf1eb366222074cfda9ee839c56a4b4/mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8", size = 9979, upload-time = "2022-08-14T12:40:09.779Z" },
+]
+
+[[package]]
+name = "mineru-open-sdk"
+version = "0.2.5"
+source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple" }
+dependencies = [
+    { name = "httpx" },
+]
+sdist = { url = "https://pypi.tuna.tsinghua.edu.cn/packages/64/5b/be9b0ae9f515132741f91b64f3de7dcb448d8701503b82e3fee72f0aa402/mineru_open_sdk-0.2.5.tar.gz", hash = "sha256:430baeacae3f18537edb62e69532620ce7fbead7d43f72b986d0cb1cc7932ee9", size = 32092, upload-time = "2026-04-10T13:51:49.642Z" }
+wheels = [
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/96/dd/667e108350a0b4683e913d2b15b21da3b3117469f586bb0652c9cbc2754d/mineru_open_sdk-0.2.5-py3-none-any.whl", hash = "sha256:db22bb764318eb3167d4cfb28849df70159b76a0ad268648ad91e9f2d47c0c1c", size = 19553, upload-time = "2026-04-10T13:51:47.648Z" },
 ]
 
 [[package]]
@@ -3766,9 +3792,11 @@ dependencies = [
     { name = "langchain-community" },
     { name = "langchain-deepseek" },
     { name = "langchain-mcp-adapters" },
+    { name = "langchain-mineru" },
     { name = "langchain-tavily" },
     { name = "langgraph-checkpoint-sqlite" },
     { name = "langgraph-cli", extra = ["inmem"] },
+    { name = "mineru-open-sdk" },
     { name = "notebook" },
     { name = "openai" },
     { name = "pypdf" },
@@ -3786,9 +3814,11 @@ requires-dist = [
     { name = "langchain-community", specifier = ">=0.4.1" },
     { name = "langchain-deepseek", specifier = ">=1.0.1" },
     { name = "langchain-mcp-adapters", specifier = ">=0.3.2" },
+    { name = "langchain-mineru", specifier = ">=0.1.3" },
     { name = "langchain-tavily", specifier = ">=0.2.17" },
     { name = "langgraph-checkpoint-sqlite", specifier = ">=3.0.3" },
     { name = "langgraph-cli", extras = ["inmem"], specifier = ">=0.4.21" },
+    { name = "mineru-open-sdk", specifier = ">=0.2.5" },
     { name = "notebook", specifier = ">=7.5.5" },
     { name = "openai", specifier = ">=2.29.0" },
     { name = "pypdf", specifier = ">=7.0.0" },
