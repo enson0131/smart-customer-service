@@ -17,7 +17,7 @@ def main() -> None:
     project_root = Path(__file__).resolve().parents[1]
     load_dotenv(project_root / ".env")
 
-    loader = MinerULoader(
+    loader = MinerULoader( # 会自动读取 MinerU 的 Token
         source=str(project_root / "resources/贵州茅台研报.pdf"),
         mode="flash",  # flash：轻量级模式；precision：精准模式，需 MINERU_TOKEN。
     )
