@@ -1,15 +1,13 @@
 """DeepResearcher：动态规划报告提纲，并行撰写章节，按提纲生成 Markdown。
 
 在项目根目录运行：
-.venv/bin/python -m demo.work-flow.orchestrator-worker "大模型在售后客服中的应用"
+.venv/bin/python -m demo.work-flow.orchestrator-worker
 """
 
-import argparse
 import operator
 from typing import Annotated, TypedDict
 
 from langchain_core.language_models import BaseChatModel
-from langgraph.config import get_stream_writer
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import Send
@@ -81,7 +79,6 @@ def build_research_graph(model: BaseChatModel) -> CompiledStateGraph:
     def worker(state: WorkerState) -> dict[str, list[tuple[int, str]]]:
         # 每次调用只撰写分配给自己的章节，以整份报告的主题限定上下文。
         section = state["section"]
-        get_stream_writer()(state)
         response = model.invoke([
             ("system", "撰写指定章节的中文 Markdown 正文，章节标题由系统添加。"
              "区分事实与推测，避免编造数据、来源或引文。"),
@@ -109,24 +106,8 @@ def build_research_graph(model: BaseChatModel) -> CompiledStateGraph:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="DeepResearcher 中文报告生成助手")
-    parser.add_argument("topic", help="报告主题")
-    args = parser.parse_args()
-    topic = args.topic.strip()
-    if not topic:
-        parser.error("报告主题不能为空")
     graph = build_research_graph(configured_model(timeout=120))
-    for mode, event in graph.stream({"topic": topic}, stream_mode=["updates", "custom"]):
-        if mode == "custom":
-            section = event["section"]
-            print(f"[worker 收到第 {event['index'] + 1} 章] {section.name}｜{section.description}", flush=True)
-        elif "orchestrator" in event:
-            print("[orchestrator 生成提纲]")
-            for number, section in enumerate(event["orchestrator"]["sections"], 1):
-                print(f"{number}. {section.name}｜{section.description}", flush=True)
-        elif "worker" in event:
-            for index, body in event["worker"]["completed_sections"]:
-                print(f"[worker 完成第 {index + 1} 章] 正文 {len(body)} 字符", flush=True)
-        elif "synthesizer" in event:
-            print("\n[synthesizer 最终报告]")
-            print(event["synthesizer"]["final_report"])
+    print("[DeepResearcher 工作流 · Mermaid]")
+    print(graph.get_graph().draw_mermaid(with_styles=False), flush=True)
+    state = graph.invoke({"topic": "创建一份关于 LLM scaling laws 的报告"})
+    print(state["final_report"])
