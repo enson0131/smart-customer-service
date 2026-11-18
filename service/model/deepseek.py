@@ -4,12 +4,12 @@ from constants import DEEPSEEK_MODEL, MODEL_MAX_RETRIES, MODEL_PROVIDER, MODEL_T
 from constants.deepseek import deepseek_connection
 
 
-def configured_model():
+def configured_model(*, timeout: float = MODEL_TIMEOUT_SECONDS):
     return init_chat_model(
         model=DEEPSEEK_MODEL,
         model_provider=MODEL_PROVIDER,
         **deepseek_connection(),
         extra_body={"thinking": {"type": "disabled"}},
-        timeout=MODEL_TIMEOUT_SECONDS,
+        timeout=timeout,
         max_retries=MODEL_MAX_RETRIES,
     )
