@@ -22,7 +22,7 @@ def main() -> None:
     text = source_path.read_text(encoding="utf-8")
     markdown_splitter = MarkdownHeaderTextSplitter(
         headers_to_split_on=[("#", "H1"), ("##", "H2"), ("###", "H3")],
-        strip_headers=False, # 保留正文中的标题，标题仍保存在 metadata 中。
+        strip_headers=False, # false - 保留正文中的标题，标题仍保存在 metadata 中。 true - 不保留
     )
     documents = markdown_splitter.split_text(text)
     for i, document in enumerate(documents, start=1):
